@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'formModel.dart';
 import 'package:share_plus/share_plus.dart'; // PDF paylaşımı için gerekli
+import 'package:flutter_pdfview/flutter_pdfview.dart'; // PDF görüntüleme için gerekli
 
 class MusteriFormlariScreen extends StatelessWidget {
   final String musteriAdSoyad;
@@ -17,6 +18,38 @@ class MusteriFormlariScreen extends StatelessWidget {
     } catch (e) {
       print('Paylaşım hatası: $e');
     }
+  }
+
+  Future<void> _showFormDialog(BuildContext context, FormModel form) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Container(
+            width: 400,  // Ekranın %90'ı genişliğinde
+            height: 500,  // A4 oranına yakın yükseklik
+            child: PDFView(
+              filePath: form.pdfFilePath,  // PDF dosya yolu
+              enableSwipe: true,  // Sayfalar arasında geçiş yapmak için kaydırma
+              swipeHorizontal: true,
+              autoSpacing: false,
+              pageFling: false,
+              onRender: (pages) => print("Toplam sayfa sayısı: $pages"),
+              onError: (error) => print(error.toString()),
+              onPageError: (page, error) => print('$page. sayfada hata: $error'),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Kapat'),
+              onPressed: () {
+                Navigator.of(context).pop();  // Popup'ı kapat
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -76,7 +109,8 @@ class MusteriFormlariScreen extends StatelessWidget {
                   ],
                 ),
                 onTap: () {
-                  // Forma tıklanınca yapılacak işlemler (örneğin PDF görüntüleme)
+                  // Forma tıklanınca popup ile formu göster
+                  _showFormDialog(context, form);
                 },
               ),
             ),
