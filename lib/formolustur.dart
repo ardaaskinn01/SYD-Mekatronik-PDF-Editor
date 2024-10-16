@@ -35,8 +35,10 @@ class _FormOlusturState extends State<FormOlustur> {
   final TextEditingController yetkiliController = TextEditingController();
   final TextEditingController islemKisaTanimController =
       TextEditingController();
-  final TextEditingController mailController =
-  TextEditingController();
+  final TextEditingController mailController = TextEditingController();
+  final TextEditingController malzemeController = TextEditingController();
+  final TextEditingController iscilikController = TextEditingController();
+  final TextEditingController toplamController = TextEditingController();
   final TextEditingController islemDetayController = TextEditingController();
 
   // Checkbox durumları için değişkenler
@@ -95,7 +97,8 @@ class _FormOlusturState extends State<FormOlustur> {
     String month = now.month.toString().padLeft(2, '0'); // Ayı 2 haneli göster
     String year = now.year.toString().substring(2); // Yılın son iki hanesini al
     String hour = now.hour.toString().padLeft(2, '0'); // Saati 2 haneli göster
-    String minute = now.minute.toString().padLeft(2, '0'); // Dakikayı 2 haneli göster
+    String minute =
+        now.minute.toString().padLeft(2, '0'); // Dakikayı 2 haneli göster
     int seriNumber = int.parse(day + month + year + hour + minute);
     num = seriNumber.toString();
   }
@@ -177,7 +180,7 @@ class _FormOlusturState extends State<FormOlustur> {
     final telefon =
         await _buildPdfPositionedText(0.2185, 0.15, telefonController.text);
     final mail =
-    await _buildPdfPositionedText(0.2385, 0.15, mailController.text);
+        await _buildPdfPositionedText(0.2385, 0.15, mailController.text);
     final yetkili =
         await _buildPdfPositionedText(0.293, 0.15, yetkiliController.text);
     final yetkili2 =
@@ -186,6 +189,12 @@ class _FormOlusturState extends State<FormOlustur> {
         0.343, 0.05, islemKisaTanimController.text);
     final islemDetay = await _buildPdfPositionedLongText(
         0.393, 0.05, islemDetayController.text);
+    final malzeme = await _buildPdfPositionedText(
+        0.728, 0.125, malzemeController.text);
+    final iscilik = await _buildPdfPositionedText(
+        0.728, 0.345, iscilikController.text);
+    final toplam = await _buildPdfPositionedText(
+        0.73, 0.7325, toplamController.text);
     final anlikTarih = await _buildPdfPositionedDate(0.1415, 0.65, tarih);
 
     if (pdfImageData != null) {
@@ -209,6 +218,9 @@ class _FormOlusturState extends State<FormOlustur> {
                 islemDetay,
                 yetkili2,
                 adSoyad2,
+                malzeme,
+                iscilik,
+                toplam,
                 // Checkbox işaretleri
                 _buildPdfPositionedCheck(0.768, 0.235, montajChecked),
                 _buildPdfPositionedCheck(0.78375, 0.235, tamirChecked),
@@ -262,6 +274,9 @@ class _FormOlusturState extends State<FormOlustur> {
     islemKisaTanimController.dispose();
     islemDetayController.dispose();
     mailController.dispose();
+    toplamController.dispose();
+    malzemeController.dispose();
+    iscilikController.dispose();
     super.dispose();
   }
 
@@ -518,7 +533,50 @@ class _FormOlusturState extends State<FormOlustur> {
                         border: OutlineInputBorder(),
                       ),
                       maxLines: null, // Alt satıra geçmesine izin verir
-                      minLines: 3,    // Başlangıçta görünmesini istediğiniz en az satır sayısı
+                      minLines:
+                          3, // Başlangıçta görünmesini istediğiniz en az satır sayısı
+                      onChanged: (value) {
+                        // Pop-up içindeki girdileri yansıtıyoruz
+                        setState(() {}); // Ana widget güncelleniyor
+                        setStateDialog(() {});
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // İşlem kısa tanım alanı
+                    TextField(
+                      controller: malzemeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Malzeme Ücreti',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        // Pop-up içindeki girdileri yansıtıyoruz
+                        setState(() {}); // Ana widget güncelleniyor
+                        setStateDialog(() {});
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // İşlem kısa tanım alanı
+                    TextField(
+                      controller: iscilikController,
+                      decoration: const InputDecoration(
+                        labelText: 'İşçilik Ücreti',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        // Pop-up içindeki girdileri yansıtıyoruz
+                        setState(() {}); // Ana widget güncelleniyor
+                        setStateDialog(() {});
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // İşlem kısa tanım alanı
+                    TextField(
+                      controller: toplamController,
+                      decoration: const InputDecoration(
+                        labelText: 'Toplam Ücret',
+                        border: OutlineInputBorder(),
+                      ),
                       onChanged: (value) {
                         // Pop-up içindeki girdileri yansıtıyoruz
                         setState(() {}); // Ana widget güncelleniyor
@@ -528,8 +586,10 @@ class _FormOlusturState extends State<FormOlustur> {
                     const SizedBox(height: 10),
                     // İşlem seçenekleri (Checkbox'lar)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Yatayda ortalama
-                      crossAxisAlignment: CrossAxisAlignment.center, // Dikeyde ortalama
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Yatayda ortalama
+                      crossAxisAlignment:
+                          CrossAxisAlignment.center, // Dikeyde ortalama
                       children: [
                         const Text('Montaj'),
                         Checkbox(
@@ -564,8 +624,10 @@ class _FormOlusturState extends State<FormOlustur> {
                       ],
                     ),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Yatayda ortalama
-                      crossAxisAlignment: CrossAxisAlignment.center, // Dikeyde ortalama
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Yatayda ortalama
+                      crossAxisAlignment:
+                          CrossAxisAlignment.center, // Dikeyde ortalama
                       children: [
                         const Text(
                           'Revizyon',
@@ -605,8 +667,10 @@ class _FormOlusturState extends State<FormOlustur> {
                     const Text('Ödeme Şekli:'),
                     // Ödeme seçenekleri (Checkbox'lar)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Yatayda ortalama
-                      crossAxisAlignment: CrossAxisAlignment.center, // Dikeyde ortalama
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Yatayda ortalama
+                      crossAxisAlignment:
+                          CrossAxisAlignment.center, // Dikeyde ortalama
                       children: [
                         const Text('Nakit'),
                         Checkbox(
@@ -631,8 +695,10 @@ class _FormOlusturState extends State<FormOlustur> {
                       ],
                     ),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Yatayda ortalama
-                      crossAxisAlignment: CrossAxisAlignment.center, // Dikeyde ortalama
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Yatayda ortalama
+                      crossAxisAlignment:
+                          CrossAxisAlignment.center, // Dikeyde ortalama
                       children: [
                         const Text('Fatura'),
                         Checkbox(
@@ -719,13 +785,15 @@ class _FormOlusturState extends State<FormOlustur> {
                   onPressed: () {
                     Navigator.of(context).pop(); // Pop-up'ı kapat
                   },
-                  child: const Text('Kapat',
+                  child: const Text(
+                    'Kapat',
                     style: const TextStyle(
                       fontSize: 13,
                       fontFamily: 'Georgia',
                       color: Color(0xFF040B47),
                       fontWeight: FontWeight.w600,
-                    ),),
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {
@@ -740,17 +808,20 @@ class _FormOlusturState extends State<FormOlustur> {
 
                     saveFormData(form).then((_) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Form başarıyla kaydedildi!')),
+                        const SnackBar(
+                            content: Text('Form başarıyla kaydedildi!')),
                       );
                     });
                   },
-                  child: const Text('Kaydet',
+                  child: const Text(
+                    'Kaydet',
                     style: const TextStyle(
                       fontSize: 13,
                       fontFamily: 'Georgia',
                       color: Color(0xFF040B47),
                       fontWeight: FontWeight.w600,
-                    ),),
+                    ),
+                  ),
                 ),
               ],
             );
@@ -760,7 +831,8 @@ class _FormOlusturState extends State<FormOlustur> {
     );
   }
 
-  void saveFormToDatabase(BuildContext context, String pdfFilePath, String musteriAdSoyad, String tarih, String num) async {
+  void saveFormToDatabase(BuildContext context, String pdfFilePath,
+      String musteriAdSoyad, String tarih, String num) async {
     final dbHelper = DatabaseHelper();
 
     // Müşteri klasörünü oluştur
@@ -791,7 +863,8 @@ class _FormOlusturState extends State<FormOlustur> {
     // SnackBar ile mesaj göster
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('PDF dosyası başarıyla ${musteriAdSoyad} klasörüne kaydedildi.'),
+        content: Text(
+            'PDF dosyası başarıyla ${musteriAdSoyad} klasörüne kaydedildi.'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -813,7 +886,7 @@ class _FormOlusturState extends State<FormOlustur> {
                     controller: pdfController,
                   ),
                   Positioned(
-                    top: boxHeight * 0.193,
+                    top: boxHeight * 0.194,
                     left: boxWidth * 0.15,
                     child: Text(
                       adSoyadController.text,
@@ -890,23 +963,23 @@ class _FormOlusturState extends State<FormOlustur> {
                       ),
                     ),
                   ),
-              Positioned(
-                top: boxHeight * 0.409,
-                left: boxWidth * 0.05, // Genel left değeri
-                child: SizedBox(
-                  width: boxWidth * 0.8,
-                    child: Text(
-                      islemDetayController.text,
-                      style: const TextStyle(
-                        fontSize: 8.5,
-                        fontFamily: 'Georgia',
-                        color: Color(0xFF040B47),
-                        fontWeight: FontWeight.w600,
-                        height: 1,
+                  Positioned(
+                    top: boxHeight * 0.409,
+                    left: boxWidth * 0.05, // Genel left değeri
+                    child: SizedBox(
+                      width: boxWidth * 0.8,
+                      child: Text(
+                        islemDetayController.text,
+                        style: const TextStyle(
+                          fontSize: 8.5,
+                          fontFamily: 'Georgia',
+                          color: Color(0xFF040B47),
+                          fontWeight: FontWeight.w600,
+                          height: 1,
+                        ),
                       ),
                     ),
                   ),
-              ),
                   Positioned(
                     top: boxHeight * 0.81,
                     left: boxWidth * 0.3,
@@ -925,6 +998,45 @@ class _FormOlusturState extends State<FormOlustur> {
                     left: boxWidth * 0.687,
                     child: Text(
                       adSoyadController.text,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontFamily: 'Georgia',
+                        color: Color(0xFF040B47),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: boxHeight * 0.74,
+                    left: boxWidth * 0.135,
+                    child: Text(
+                      malzemeController.text,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontFamily: 'Georgia',
+                        color: Color(0xFF040B47),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: boxHeight * 0.74,
+                    left: boxWidth * 0.36,
+                    child: Text(
+                      iscilikController.text,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontFamily: 'Georgia',
+                        color: Color(0xFF040B47),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: boxHeight * 0.742,
+                    left: boxWidth * 0.765,
+                    child: Text(
+                      toplamController.text,
                       style: const TextStyle(
                         fontSize: 9.5,
                         fontFamily: 'Georgia',
@@ -1001,7 +1113,7 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8835,
+                    top: boxHeight * 0.899,
                     left: boxWidth * 0.2357,
                     child: odemeFaturaChecked
                         ? const Icon(
@@ -1012,7 +1124,7 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.899,
+                    top: boxHeight * 0.9135,
                     left: boxWidth * 0.2357,
                     child: odemeCekChecked
                         ? const Icon(
@@ -1023,7 +1135,7 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.91425,
+                    top: boxHeight * 0.8835,
                     left: boxWidth * 0.2357,
                     child: odemeKartChecked
                         ? const Icon(
