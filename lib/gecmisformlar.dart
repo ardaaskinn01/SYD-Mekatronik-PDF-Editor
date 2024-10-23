@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'databaseHelper.dart';
 import 'formModel.dart';
+import 'formModel3.dart';
 import 'musteriFormlariScreen.dart'; // Müşteri formlarının listelendiği yeni ekran
 
 class GecmisFormlar extends StatefulWidget {

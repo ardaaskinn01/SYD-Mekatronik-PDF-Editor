@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'formModel3.dart';
 import 'formolustur.dart';
 import 'gecmisformlar.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -56,7 +57,9 @@ class _AnasayfaState extends State<Anasayfa> {
                   // FormOlustur sayfasına geçiş
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const FormOlustur()),
+                    MaterialPageRoute(
+                      builder: (context) => FormOlustur(form: FormModel3(), id: 0),
+                    ),
                   );
                 },
                 icon: Icon(Icons.add_circle, color: Colors.black), // İkon eklendi

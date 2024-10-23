@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+import 'package:pdf_editor/formModel3.dart';
+import 'package:pdf_editor/mainPage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -19,7 +22,10 @@ import 'formModel.dart';
 import 'formModel2.dart';
 
 class FormOlustur extends StatefulWidget {
-  const FormOlustur({super.key});
+  final FormModel3 form;
+  final int id;
+
+  const FormOlustur({super.key, required this.form, required this.id});
 
   @override
   _FormOlusturState createState() => _FormOlusturState();
@@ -27,23 +33,28 @@ class FormOlustur extends StatefulWidget {
 
 class _FormOlusturState extends State<FormOlustur> {
   // Metin alanları için controller'lar
+  Map<String, dynamic>? map;
   late String tarih;
   late String num;
-  final TextEditingController adSoyadController = TextEditingController();
-  final TextEditingController adresController = TextEditingController();
-  final TextEditingController telefonController = TextEditingController();
-  final TextEditingController yetkiliController = TextEditingController();
-  final TextEditingController islemKisaTanimController =
-      TextEditingController();
-  final TextEditingController mailController = TextEditingController();
-  final TextEditingController malzemeController = TextEditingController();
-  final TextEditingController iscilikController = TextEditingController();
-  final TextEditingController toplamController = TextEditingController();
-  final TextEditingController islemDetayController = TextEditingController();
+  late TextEditingController adSoyadController;
+  late TextEditingController adSoyad2Controller;
+  late TextEditingController adresController;
+  late TextEditingController telefonController;
+  late TextEditingController yetkiliController;
+  late TextEditingController islemKisaTanimController;
+  late TextEditingController mailController;
+  late TextEditingController malzemeController;
+  late TextEditingController iscilikController;
+  late TextEditingController toplamController;
+  late TextEditingController islemDetayController;
+
+  late SignatureController yetkiliImzaController =
+      SignatureController(penStrokeWidth: 2, penColor: Colors.black);
+  late SignatureController musteriImzaController =
+      SignatureController(penStrokeWidth: 2, penColor: Colors.black);
 
   // Checkbox durumları için değişkenler
   bool montajChecked = false;
-  bool egitimChecked = false;
   bool tamirChecked = false;
   bool revizyonChecked = false;
   bool projeSureciChecked = false;
@@ -52,12 +63,6 @@ class _FormOlusturState extends State<FormOlustur> {
   bool odemeKartChecked = false;
   bool odemeFaturaChecked = false;
   bool odemeCekChecked = false;
-
-  // İmza alanları için controller'lar
-  final SignatureController yetkiliImzaController =
-      SignatureController(penStrokeWidth: 2, penColor: Colors.black);
-  final SignatureController musteriImzaController =
-      SignatureController(penStrokeWidth: 2, penColor: Colors.black);
 
   late pdfx.PdfController pdfController;
   final double boxWidth = 375; // PDF görüntüleme kutusunun genişliği
@@ -68,14 +73,42 @@ class _FormOlusturState extends State<FormOlustur> {
   void initState() {
     super.initState();
     _initializePdf();
+    // Controller'ları başlat
+    adSoyadController = TextEditingController(text: widget.form.adSoyad ?? '');
+    adSoyad2Controller =
+        TextEditingController(text: widget.form.adSoyad2 ?? '');
+    adresController = TextEditingController(text: widget.form.adres ?? '');
+    telefonController = TextEditingController(text: widget.form.telefon ?? '');
+    yetkiliController = TextEditingController(text: widget.form.yetkili ?? '');
+    islemKisaTanimController =
+        TextEditingController(text: widget.form.islemKisaTanim ?? '');
+    mailController = TextEditingController(text: widget.form.mail ?? '');
+    malzemeController = TextEditingController(text: widget.form.malzeme ?? '');
+    iscilikController = TextEditingController(text: widget.form.iscilik ?? '');
+    toplamController = TextEditingController(text: widget.form.toplam ?? '');
+    islemDetayController =
+        TextEditingController(text: widget.form.islemDetay ?? '');
 
+    montajChecked = widget.form.montajChecked;
+    bakimChecked = widget.form.bakimChecked;
+    tamirChecked = widget.form.tamirChecked;
+    revizyonChecked = widget.form.revizyonChecked;
+    projeSureciChecked = widget.form.projeSureciChecked;
+    odemeCekChecked = widget.form.odemeCekChecked;
+    odemeFaturaChecked = widget.form.odemeFaturaChecked;
+    odemeKartChecked = widget.form.odemeKartChecked;
+    odemeNakitChecked = widget.form.odemeNakitChecked;
+    yetkiliImzaController =
+        SignatureController(penStrokeWidth: 2, penColor: Colors.black);
+    musteriImzaController =
+        SignatureController(penStrokeWidth: 2, penColor: Colors.black);
+
+    // Listener'ı burada tanımlayın
     adSoyadController.addListener(() async {
-      // Ad-soyad her değiştiğinde kontrol et
       String adSoyad = adSoyadController.text;
       FormModel2? form = await getFormDataByAdSoyad(adSoyad);
 
       if (form != null) {
-        // Eğer form bilgisi bulunursa diğer alanları doldur
         setState(() {
           mailController.text = form.mail;
           telefonController.text = form.telefon;
@@ -93,14 +126,20 @@ class _FormOlusturState extends State<FormOlustur> {
     DateTime now = DateTime.now();
     final DateFormat dateFormatter = DateFormat('dd/MM/yyyy');
     tarih = dateFormatter.format(now);
-    String day = now.day.toString().padLeft(2, '0'); // Günü 2 haneli göster
-    String month = now.month.toString().padLeft(2, '0'); // Ayı 2 haneli göster
-    String year = now.year.toString().substring(2); // Yılın son iki hanesini al
-    String hour = now.hour.toString().padLeft(2, '0'); // Saati 2 haneli göster
-    String minute =
-        now.minute.toString().padLeft(2, '0'); // Dakikayı 2 haneli göster
-    int seriNumber = int.parse(day + month + year + hour + minute);
-    num = seriNumber.toString();
+    if (widget.id == 0) {
+      String day = now.day.toString().padLeft(2, '0'); // Günü 2 haneli göster
+      String month = now.month.toString().padLeft(2, '0'); // Ayı 2 haneli göster
+      String year = now.year.toString().substring(2); // Yılın son iki hanesini al
+      String hour = now.hour.toString().padLeft(2, '0'); // Saati 2 haneli göster
+      String minute =
+      now.minute.toString().padLeft(2, '0'); // Dakikayı 2 haneli göster
+      int seriNumber = int.parse(day + month + year + hour + minute);
+      num = seriNumber.toString();
+    }
+    else {
+      num = widget.form.num;
+    }
+
   }
 
   Future<void> requestPermissions() async {
@@ -170,11 +209,11 @@ class _FormOlusturState extends State<FormOlustur> {
     final yetkiliImza =
         await _buildPdfPositionedSignature(0.85, 0.365, yetkiliImzaController);
     final musteriImza =
-        await _buildPdfPositionedSignature(0.85, 0.715, musteriImzaController);
+        await _buildPdfPositionedSignature(0.85, 0.73, musteriImzaController);
     final adSoyad =
         await _buildPdfPositionedText(0.1825, 0.15, adSoyadController.text);
     final adSoyad2 =
-        await _buildPdfPositionedText(0.797, 0.667, adSoyadController.text);
+        await _buildPdfPositionedText(0.797, 0.667, adSoyad2Controller.text);
     final adres =
         await _buildPdfPositionedText(0.2575, 0.15, adresController.text);
     final telefon =
@@ -189,12 +228,12 @@ class _FormOlusturState extends State<FormOlustur> {
         0.343, 0.05, islemKisaTanimController.text);
     final islemDetay = await _buildPdfPositionedLongText(
         0.393, 0.05, islemDetayController.text);
-    final malzeme = await _buildPdfPositionedText(
-        0.728, 0.125, malzemeController.text);
-    final iscilik = await _buildPdfPositionedText(
-        0.728, 0.345, iscilikController.text);
-    final toplam = await _buildPdfPositionedText(
-        0.73, 0.7325, toplamController.text);
+    final malzeme =
+        await _buildPdfPositionedText(0.728, 0.125, malzemeController.text);
+    final iscilik =
+        await _buildPdfPositionedText(0.728, 0.345, iscilikController.text);
+    final toplam =
+        await _buildPdfPositionedText(0.73, 0.7325, toplamController.text);
     final anlikTarih = await _buildPdfPositionedDate(0.1415, 0.65, tarih);
 
     if (pdfImageData != null) {
@@ -268,6 +307,7 @@ class _FormOlusturState extends State<FormOlustur> {
     yetkiliImzaController.dispose();
     musteriImzaController.dispose();
     adSoyadController.dispose();
+    adSoyad2Controller.dispose();
     adresController.dispose();
     telefonController.dispose();
     yetkiliController.dispose();
@@ -402,8 +442,9 @@ class _FormOlusturState extends State<FormOlustur> {
   }
 
 // İmzayı PDF'ye yerleştirmek için widget
-  Future<pw.Widget> _buildPdfPositionedSignature(double topPercent,
-      double leftPercent, SignatureController controller) async {
+  Future<pw.Widget> _buildPdfPositionedSignature(
+      double topPercent, double leftPercent, SignatureController controller,
+      {double scaleFactor = 35.0}) async {
     // İmza verilerini al
     final signatureImageBytes = await _getSignatureImageBytes(controller);
 
@@ -412,9 +453,13 @@ class _FormOlusturState extends State<FormOlustur> {
         top: pdfHeight * topPercent,
         left: pdfWidth * leftPercent,
         child: pw.Container(
-          width: boxWidth * 0.1, // İmza genişliği
-          height: boxHeight * 0.02, // İmza yüksekliği
-          child: pw.Image(pw.MemoryImage(signatureImageBytes)), // İmzayı ekle
+          width: boxWidth *
+              0.004 *
+              scaleFactor, // İmza genişliği, scaleFactor ile ölçeklendi
+          height: boxHeight *
+              0.008 *
+              scaleFactor, // İmza yüksekliği, scaleFactor ile ölçeklendi
+          child: pw.Image(pw.MemoryImage(signatureImageBytes)),
         ),
       );
     } else {
@@ -423,8 +468,12 @@ class _FormOlusturState extends State<FormOlustur> {
         top: pdfHeight * topPercent,
         left: pdfWidth * leftPercent,
         child: pw.Container(
-          width: boxWidth * 0.1, // İmza genişliği
-          height: boxHeight * 0.02, // İmza yüksekliği
+          width: boxWidth *
+              0.004 *
+              scaleFactor, // İmza genişliği, scaleFactor ile ölçeklendi
+          height: boxHeight *
+              0.008 *
+              scaleFactor, // İmza yüksekliği, scaleFactor ile ölçeklendi
           color: PdfColors.white, // İmza alanı boşsa beyaz arka plan
         ),
       );
@@ -575,6 +624,20 @@ class _FormOlusturState extends State<FormOlustur> {
                       controller: toplamController,
                       decoration: const InputDecoration(
                         labelText: 'Toplam Ücret',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        // Pop-up içindeki girdileri yansıtıyoruz
+                        setState(() {}); // Ana widget güncelleniyor
+                        setStateDialog(() {});
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // İşlem kısa tanım alanı
+                    TextField(
+                      controller: adSoyad2Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Müşteri Yetkilisi',
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
@@ -834,6 +897,10 @@ class _FormOlusturState extends State<FormOlustur> {
   void saveFormToDatabase(BuildContext context, String pdfFilePath,
       String musteriAdSoyad, String tarih, String num) async {
     final dbHelper = DatabaseHelper();
+    Uint8List? musteriImzaImage =
+        await getImageAsUint8List(musteriImzaController);
+    Uint8List? yetkiliImzaImage =
+        await getImageAsUint8List(yetkiliImzaController);
 
     // Müşteri klasörünü oluştur
     final directory = await getApplicationDocumentsDirectory();
@@ -857,8 +924,34 @@ class _FormOlusturState extends State<FormOlustur> {
       tarih: tarih,
     );
 
+    FormModel3 form3 = FormModel3(
+      num: num,
+      adSoyad: adSoyadController.text,
+      adSoyad2: adSoyad2Controller.text,
+      adres: adresController.text,
+      mail: mailController.text,
+      telefon: telefonController.text,
+      yetkili: yetkiliController.text,
+      islemKisaTanim: islemKisaTanimController.text,
+      islemDetay: islemDetayController.text,
+      malzeme: malzemeController.text,
+      iscilik: iscilikController.text,
+      toplam: toplamController.text,
+      montajChecked: montajChecked,
+      bakimChecked: bakimChecked,
+      tamirChecked: tamirChecked,
+      revizyonChecked: revizyonChecked,
+      projeSureciChecked: projeSureciChecked,
+      odemeNakitChecked: odemeNakitChecked,
+      odemeFaturaChecked: odemeFaturaChecked,
+      odemeCekChecked: odemeCekChecked,
+      odemeKartChecked: odemeKartChecked,
+      musteriImza: musteriImzaImage, // Assign the Image object
+      yetkiliImza: yetkiliImzaImage, // Uint8List formatındaki imza
+    );
     // Formu veritabanına kaydet
     await dbHelper.insertForm(form);
+    await dbHelper.insertForm3(form3);
 
     // SnackBar ile mesaj göster
     ScaffoldMessenger.of(context).showSnackBar(
@@ -870,9 +963,45 @@ class _FormOlusturState extends State<FormOlustur> {
     );
   }
 
+  Future<Uint8List?> getImageAsUint8List(SignatureController controller) async {
+    // İmza görüntüsünü al
+    final ui.Image? image = await controller.toImage();
+
+    // Eğer image null ise hata vermeden çık
+    if (image == null) {
+      return null; // veya uygun bir değer döndürebilirsiniz
+    }
+
+    // Byte verisine dönüştür
+    final ByteData? byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+
+    if (byteData == null) {
+      return null; // veya uygun bir değer döndürebilirsiniz
+    }
+
+    return byteData.buffer.asUint8List();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back), // Ana sayfaya dönme simgesi
+          onPressed: () {
+            // Ana sayfaya geri dönme işlemi
+            Navigator.push(
+              context, // BuildContext
+              MaterialPageRoute(
+                builder: (context) => const Anasayfa(), // Ana sayfa widget'ı
+              ),
+            );
+          },
+        ),
+        title: const Text('PDF Görüntüleme'), // Başlık
+        backgroundColor: Colors.blue, // Başlık arkaplan rengi
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -997,7 +1126,7 @@ class _FormOlusturState extends State<FormOlustur> {
                     top: boxHeight * 0.81,
                     left: boxWidth * 0.687,
                     child: Text(
-                      adSoyadController.text,
+                      adSoyad2Controller.text,
                       style: const TextStyle(
                         fontSize: 9.5,
                         fontFamily: 'Georgia',
@@ -1146,16 +1275,16 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.85, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.3, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.8475, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.303, // Yüzdelik konuma göre left
                     child: Container(
-                      width: boxWidth * 0.125, // İmza alanının genişliği
-                      height: boxHeight * 0.025, // İmza alanının yüksekliği
+                      width: boxWidth * 0.004, // İmza alanının genişliği
+                      height: boxHeight * 0.008, // İmza alanının yüksekliği
                       decoration: BoxDecoration(
                         color: Colors.white, // Arkaplan rengi
                       ),
                       child: Transform.scale(
-                        scale: 0.27, // Çizim boyutunu %50 küçültmek için
+                        scale: 0.375, // Çizim boyutunu %50 küçültmek için
                         child: Signature(
                           controller: yetkiliImzaController,
                           backgroundColor: Colors.transparent, // Arkaplan rengi
@@ -1164,16 +1293,16 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.85, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.665, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.8465, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.668, // Yüzdelik konuma göre left
                     child: Container(
-                      width: boxWidth * 0.125, // İmza alanının genişliği
-                      height: boxHeight * 0.025, // İmza alanının yüksekliği
+                      width: boxWidth * 0.004, // İmza alanının genişliği
+                      height: boxHeight * 0.008, // İmza alanının yüksekliği
                       decoration: BoxDecoration(
                         color: Colors.white, // Arkaplan rengi
                       ),
                       child: Transform.scale(
-                        scale: 0.27, // Çizim boyutunu %50 küçültmek için
+                        scale: 0.375, // Çizim boyutunu %50 küçültmek için
                         child: Signature(
                           controller: musteriImzaController,
                           backgroundColor: Colors.transparent, // Arkaplan rengi

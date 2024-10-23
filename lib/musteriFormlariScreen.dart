@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:pdf_editor/formolustur.dart';
+import 'databaseHelper.dart';
 import 'formModel.dart';
+import 'formModel3.dart';
 import 'package:share_plus/share_plus.dart'; // PDF paylaşımı için gerekli
-import 'package:flutter_pdfview/flutter_pdfview.dart'; // PDF görüntüleme için gerekli
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 class MusteriFormlariScreen extends StatelessWidget {
   final String musteriAdSoyad;
@@ -17,6 +20,29 @@ class MusteriFormlariScreen extends StatelessWidget {
       await Share.shareXFiles([xFile], text: 'Paylaşılan PDF: ${form.musteriAdSoyad}');
     } catch (e) {
       print('Paylaşım hatası: $e');
+    }
+  }
+
+  Future<void> _editForm(BuildContext context, FormModel form) async {
+    // form numarasına göre forms_2 ve forms_3'ten verileri alın
+    final form3 = await DatabaseHelper().getForms2ByNum(form.num);
+
+    if (form3 != null) {
+      // FormOlustur sayfasına geçiş yapın ve form verisini gönderin
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FormOlustur(
+            form: form3,  // FormModel3 verisini gönderiyoruz
+            id: 1
+          ),
+        ),
+      );
+    } else {
+      // Form bulunamadığında bir mesaj göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Form bulunamadı!')),
+      );
     }
   }
 
@@ -102,6 +128,10 @@ class MusteriFormlariScreen extends StatelessWidget {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    IconButton(
+                      icon: Icon(Icons.edit, color: Colors.teal),
+                      onPressed: () => _editForm(context, form), // Düzenleme ekranına geçiş
+                    ),
                     IconButton(
                       icon: Icon(Icons.share, color: Colors.teal),
                       onPressed: () => _shareForm(form), // Paylaş butonu
