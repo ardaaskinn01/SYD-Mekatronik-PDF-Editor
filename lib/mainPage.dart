@@ -23,9 +23,12 @@ class _AnasayfaState extends State<Anasayfa> {
   Future<void> requestPermissions() async {
     final status = await Permission.storage.request();
     if (status.isGranted) {
-      // İzin verildi
-    } else {
-      // İzin verilmedi
+      print("İzin verildi");
+    } else if (status.isDenied) {
+      print("İzin reddedildi");
+    } else if (status.isPermanentlyDenied) {
+      print("İzin kalıcı olarak reddedildi. Ayarlar ekranına yönlendirebilirsiniz.");
+      openAppSettings(); // Ayarlar ekranını açabiliriz
     }
   }
 

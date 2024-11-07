@@ -1,10 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf_editor/formolustur.dart';
 import 'databaseHelper.dart';
 import 'formModel.dart';
-import 'formModel3.dart';
-import 'package:share_plus/share_plus.dart'; // PDF paylaşımı için gerekli
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MusteriFormlariScreen extends StatelessWidget {
   final String musteriAdSoyad;
@@ -24,22 +25,19 @@ class MusteriFormlariScreen extends StatelessWidget {
   }
 
   Future<void> _editForm(BuildContext context, FormModel form) async {
-    // form numarasına göre forms_2 ve forms_3'ten verileri alın
     final form3 = await DatabaseHelper().getForms2ByNum(form.num);
 
     if (form3 != null) {
-      // FormOlustur sayfasına geçiş yapın ve form verisini gönderin
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => FormOlustur(
-            form: form3,  // FormModel3 verisini gönderiyoruz
-            id: 1
+            form: form3,
+            id: 1,
           ),
         ),
       );
     } else {
-      // Form bulunamadığında bir mesaj göster
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Form bulunamadı!')),
       );
@@ -52,11 +50,11 @@ class MusteriFormlariScreen extends StatelessWidget {
       builder: (BuildContext context) {
         return AlertDialog(
           content: Container(
-            width: 400,  // Ekranın %90'ı genişliğinde
-            height: 500,  // A4 oranına yakın yükseklik
+            width: 400,
+            height: 500,
             child: PDFView(
-              filePath: form.pdfFilePath,  // PDF dosya yolu
-              enableSwipe: true,  // Sayfalar arasında geçiş yapmak için kaydırma
+              filePath: form.pdfFilePath,
+              enableSwipe: true,
               swipeHorizontal: true,
               autoSpacing: false,
               pageFling: false,
@@ -69,7 +67,7 @@ class MusteriFormlariScreen extends StatelessWidget {
             TextButton(
               child: Text('Kapat'),
               onPressed: () {
-                Navigator.of(context).pop();  // Popup'ı kapat
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -78,29 +76,58 @@ class MusteriFormlariScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _downloadForm(BuildContext context, FormModel form) async {
+    try {
+      // Genel depolama yolunu doğrudan tanımlıyoruz
+      final directoryPath = '/storage/emulated/0/Documents/SYD MEKATRONİK/${form.musteriAdSoyad}';
+      final sydFolder = Directory(directoryPath);
+
+      // Klasör oluşturma
+      if (!await sydFolder.exists()) {
+        await sydFolder.create(recursive: true);
+      }
+
+      final filePath = '${sydFolder.path}/${form.num}.pdf';
+      final file = File(filePath);
+
+      // PDF dosyasını kaydetme işlemi
+      final originalFile = File(form.pdfFilePath);
+      await file.writeAsBytes(await originalFile.readAsBytes());
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF indirildi: ${file.path}')),
+      );
+    } catch (e) {
+      print('İndirme hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF indirilemedi!')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('$musteriAdSoyad - Formlar'),
-        backgroundColor: Colors.teal, // AppBar rengi
+        backgroundColor: Colors.teal,
       ),
       body: ListView.builder(
-        padding: EdgeInsets.all(10), // Liste boşlukları
+        padding: EdgeInsets.all(10),
         itemCount: forms.length,
         itemBuilder: (context, index) {
           final form = forms[index];
 
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0), // Kartlar arasında boşluk
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Card(
               elevation: 5,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15), // Kartın köşeleri yuvarlatılmış
+                borderRadius: BorderRadius.circular(15),
               ),
               child: ListTile(
                 contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                leading: Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 36), // PDF ikonu
+                leading: Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 36),
                 title: Text(
                   'Seri No: ${form.num}',
                   style: TextStyle(
@@ -108,12 +135,12 @@ class MusteriFormlariScreen extends StatelessWidget {
                     fontSize: 18,
                     color: Colors.black87,
                   ),
-                ), // Form seri numarası
+                ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6.0),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.black54), // Tarih ikonu
+                      Icon(Icons.calendar_today, size: 16, color: Colors.black54),
                       SizedBox(width: 5),
                       Text(
                         form.tarih,
@@ -121,7 +148,7 @@ class MusteriFormlariScreen extends StatelessWidget {
                           fontSize: 14,
                           color: Colors.black54,
                         ),
-                      ), // Tarih
+                      ),
                     ],
                   ),
                 ),
@@ -130,16 +157,19 @@ class MusteriFormlariScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: Icon(Icons.edit, color: Colors.teal),
-                      onPressed: () => _editForm(context, form), // Düzenleme ekranına geçiş
+                      onPressed: () => _editForm(context, form),
                     ),
                     IconButton(
                       icon: Icon(Icons.share, color: Colors.teal),
-                      onPressed: () => _shareForm(form), // Paylaş butonu
+                      onPressed: () => _shareForm(form),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.download, color: Colors.teal),
+                      onPressed: () => _downloadForm(context, form), // İndirme butonu
                     ),
                   ],
                 ),
                 onTap: () {
-                  // Forma tıklanınca popup ile formu göster
                   _showFormDialog(context, form);
                 },
               ),
