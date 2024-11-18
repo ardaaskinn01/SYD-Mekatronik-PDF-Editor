@@ -1,5 +1,5 @@
 import 'dart:ui' as ui;
-import 'package:pdf_editor/formModel3.dart';
+import 'package:pdf_editor/form/formModel3.dart';
 import 'package:pdf_editor/mainPage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
@@ -17,7 +17,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-import 'databaseHelper.dart';
+import '../databaseHelper.dart';
 import 'formModel.dart';
 import 'formModel2.dart';
 
@@ -64,7 +64,7 @@ class _FormOlusturState extends State<FormOlustur> {
   bool odemeFaturaChecked = false;
   bool odemeCekChecked = false;
 
-  late pdfx.PdfController pdfController;
+  late pdfx.PdfControllerPinch? pdfController;
   final double boxWidth = 375; // PDF görüntüleme kutusunun genişliği
   final double boxHeight = 550; // PDF görüntüleme kutusunun yüksekliği
   final double pdfWidth = 498; // PDF görüntüleme kutusunun genişliği
@@ -119,7 +119,7 @@ class _FormOlusturState extends State<FormOlustur> {
   }
 
   Future<void> _initializePdf() async {
-    pdfController = pdfx.PdfController(
+    pdfController = pdfx.PdfControllerPinch(
       document:
           pdfx.PdfDocument.openAsset('assets/documents/sydservisformu.pdf'),
     );
@@ -303,7 +303,7 @@ class _FormOlusturState extends State<FormOlustur> {
 
   @override
   void dispose() {
-    pdfController.dispose();
+    pdfController?.dispose();
     yetkiliImzaController.dispose();
     musteriImzaController.dispose();
     adSoyadController.dispose();
@@ -988,19 +988,13 @@ class _FormOlusturState extends State<FormOlustur> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back), // Ana sayfaya dönme simgesi
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Ana sayfaya geri dönme işlemi
-            Navigator.push(
-              context, // BuildContext
-              MaterialPageRoute(
-                builder: (context) => const Anasayfa(), // Ana sayfa widget'ı
-              ),
-            );
+            Navigator.pop(context); // Geri dönme işlemi
           },
         ),
-        title: const Text('PDF Görüntüleme'), // Başlık
-        backgroundColor: Colors.blue, // Başlık arkaplan rengi
+        title: const Text('PDF Görüntüleme'),
+        backgroundColor: Colors.blue,
       ),
       body: Center(
         child: Column(
@@ -1011,8 +1005,10 @@ class _FormOlusturState extends State<FormOlustur> {
               height: boxHeight,
               child: Stack(
                 children: [
-                  pdfx.PdfView(
-                    controller: pdfController,
+                  pdfx.PdfViewPinch(
+                    controller: pdfController!,
+                    minScale: 1.0,  // En küçük yakınlaştırma
+                    maxScale: 1.0,  // En büyük yakınlaştırma
                   ),
                   Positioned(
                     top: boxHeight * 0.194,

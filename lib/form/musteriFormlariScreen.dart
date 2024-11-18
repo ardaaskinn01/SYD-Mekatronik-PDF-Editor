@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:pdf_editor/formolustur.dart';
-import 'databaseHelper.dart';
+import 'package:pdf_editor/form/formolustur.dart';
+import '../databaseHelper.dart';
 import 'formModel.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MusteriFormlariScreen extends StatelessWidget {
   final String musteriAdSoyad;
@@ -13,12 +14,24 @@ class MusteriFormlariScreen extends StatelessWidget {
 
   MusteriFormlariScreen({required this.musteriAdSoyad, required this.forms});
 
+  Future<void> requestPermissions() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
+    }
+    var status2 = await Permission.accessMediaLocation.status;
+    if (!status2.isGranted) {
+      await Permission.accessMediaLocation.request();
+    }
+  }
+
   Future<void> _shareForm(FormModel form) async {
     String filePath = form.pdfFilePath;
     final xFile = XFile(filePath);
 
     try {
-      await Share.shareXFiles([xFile], text: 'Paylaşılan PDF: ${form.musteriAdSoyad}');
+      await Share.shareXFiles([xFile],
+          text: 'Paylaşılan PDF: ${form.musteriAdSoyad}');
     } catch (e) {
       print('Paylaşım hatası: $e');
     }
@@ -60,7 +73,8 @@ class MusteriFormlariScreen extends StatelessWidget {
               pageFling: false,
               onRender: (pages) => print("Toplam sayfa sayısı: $pages"),
               onError: (error) => print(error.toString()),
-              onPageError: (page, error) => print('$page. sayfada hata: $error'),
+              onPageError: (page, error) =>
+                  print('$page. sayfada hata: $error'),
             ),
           ),
           actions: [
@@ -78,8 +92,10 @@ class MusteriFormlariScreen extends StatelessWidget {
 
   Future<void> _downloadForm(BuildContext context, FormModel form) async {
     try {
-      // Genel depolama yolunu doğrudan tanımlıyoruz
-      final directoryPath = '/storage/emulated/0/Documents/SYD MEKATRONİK/${form.musteriAdSoyad}';
+      requestPermissions();
+      final directory = await getExternalStorageDirectory();
+      final directoryPath =
+          '${directory!.path}/SYD MEKATRONİK/${form.musteriAdSoyad}';
       final sydFolder = Directory(directoryPath);
 
       // Klasör oluşturma
@@ -126,8 +142,10 @@ class MusteriFormlariScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
               ),
               child: ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                leading: Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 36),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                leading: Icon(Icons.picture_as_pdf,
+                    color: Colors.redAccent, size: 36),
                 title: Text(
                   'Seri No: ${form.num}',
                   style: TextStyle(
@@ -140,7 +158,8 @@ class MusteriFormlariScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6.0),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.black54),
+                      Icon(Icons.calendar_today,
+                          size: 16, color: Colors.black54),
                       SizedBox(width: 5),
                       Text(
                         form.tarih,
@@ -165,7 +184,8 @@ class MusteriFormlariScreen extends StatelessWidget {
                     ),
                     IconButton(
                       icon: Icon(Icons.download, color: Colors.teal),
-                      onPressed: () => _downloadForm(context, form), // İndirme butonu
+                      onPressed: () =>
+                          _downloadForm(context, form), // İndirme butonu
                     ),
                   ],
                 ),

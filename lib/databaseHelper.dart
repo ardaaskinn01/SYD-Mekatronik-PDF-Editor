@@ -1,11 +1,12 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:pdf_editor/projetakip/projeModel.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-
-import 'formModel.dart';
-import 'formModel3.dart';
+import 'package:pdf_editor/projetakip/ProjeGoreviModel.dart';
+import 'form/formModel.dart';
+import 'form/formModel3.dart';
+import 'projetakip/NotModel.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -26,24 +27,89 @@ class DatabaseHelper {
 
     return _database!;
   }
+
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'my_database.db');
 
     return await openDatabase(
-        path,
-        version: 3,
-        onCreate: (Database db, int version) async {
-          await db.execute(
-            'CREATE TABLE forms_4(num TEXT PRIMARY KEY, adSoyad TEXT, adSoyad2 TEXT, adres TEXT, mail TEXT, telefon TEXT, yetkili TEXT, '
-                'islemKisaTanim TEXT, islemDetay TEXT, malzeme TEXT, iscilik TEXT, toplam TEXT, '
-                'montajChecked INTEGER, bakimChecked INTEGER, tamirChecked INTEGER, revizyonChecked INTEGER, '
-                'projeSureciChecked INTEGER, odemeNakitChecked INTEGER, odemeFaturaChecked INTEGER, '
-                'odemeCekChecked INTEGER, odemeKartChecked INTEGER, musteriImza TEXT, yetkiliImza TEXT)',
-          );
-          await db.execute(
-            'CREATE TABLE forms_2(num TEXT PRIMARY KEY, pdfFilePath TEXT, musteriAdSoyad TEXT, tarih TEXT)',
-          );
+      path,
+      version: 24, // Increment database version
+      onCreate: (Database db, int version) async {
+        await _createTables(db);
+      },
+      onUpgrade: (Database db, int oldVersion, int newVersion) async {
+        print("Database upgrade from version $oldVersion to $newVersion");
+
+        if (oldVersion < 24) { // Assuming projeler4 was introduced in version 9
+          await _createTables(db);
         }
+      },
+    );
+  }
+
+  Future<void> _createTables(Database db) async {
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS forms_4(num TEXT PRIMARY KEY, adSoyad TEXT, adSoyad2 TEXT, adres TEXT, mail TEXT, telefon TEXT, yetkili TEXT, '
+          'islemKisaTanim TEXT, islemDetay TEXT, malzeme TEXT, iscilik TEXT, toplam TEXT, '
+          'montajChecked INTEGER, bakimChecked INTEGER, tamirChecked INTEGER, revizyonChecked INTEGER, '
+          'projeSureciChecked INTEGER, odemeNakitChecked INTEGER, odemeFaturaChecked INTEGER, '
+          'odemeCekChecked INTEGER, odemeKartChecked INTEGER, musteriImza TEXT, yetkiliImza TEXT)',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS forms_2(num TEXT PRIMARY KEY, pdfFilePath TEXT, musteriAdSoyad TEXT, tarih TEXT)',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS projeler4('
+          'id TEXT PRIMARY KEY, '
+          'projeIsmi TEXT, '
+          'musteriIsmi TEXT, '
+          'projeAciklama TEXT, '
+          'baslangicTarihi DATETIME, '
+          'isFinish INTEGER '
+          ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS asama('
+          'id TEXT PRIMARY KEY, '
+          'projeId TEXT, '
+          'gorevAdi TEXT, '
+          'eklemeTarihi TEXT '
+          ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS gorsel('
+          'id TEXT PRIMARY KEY, '
+          'asamaId TEXT, '
+          'gorsel TEXT, '
+          'eklemeTarihi TEXT '
+          ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS belge2('
+          'id TEXT PRIMARY KEY, '
+          'asamaId TEXT, '
+          'belge TEXT, '
+          'belgeYolu TEXT, '
+          'eklemeTarihi TEXT '
+          ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS malzeme('
+          'id TEXT PRIMARY KEY, '
+          'asamaId TEXT, '
+          'malzeme TEXT, '
+          'metin TEXT, '
+          'belgeYolu TEXT, '
+          'eklemeTarihi TEXT '
+          ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS note('
+          'id TEXT PRIMARY KEY, '
+          'asamaId TEXT, '
+          'note TEXT, '
+          'eklemeTarihi TEXT '
+          ')',
     );
   }
 
@@ -73,8 +139,10 @@ class DatabaseHelper {
         'odemeFaturaChecked': form.odemeFaturaChecked ? 1 : 0,
         'odemeCekChecked': form.odemeCekChecked ? 1 : 0,
         'odemeKartChecked': form.odemeKartChecked ? 1 : 0,
-        'musteriImza': base64Encode(form.musteriImza), // Base64 formatında sakla
-        'yetkiliImza': base64Encode(form.yetkiliImza), // Base64 formatında sakla
+        'musteriImza':
+            base64Encode(form.musteriImza), // Base64 formatında sakla
+        'yetkiliImza':
+            base64Encode(form.yetkiliImza), // Base64 formatında sakla
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -98,7 +166,8 @@ class DatabaseHelper {
       await db.insert(
         'forms_2',
         form.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace, // Çakışma durumunda eski kaydı güncelle
+        conflictAlgorithm:
+            ConflictAlgorithm.replace, // Çakışma durumunda eski kaydı güncelle
       );
     }
   }
@@ -106,7 +175,7 @@ class DatabaseHelper {
   Future<int> updateForm(FormModel form) async {
     final db = await database;
     return await db.update(
-      'forms_2',  // Tablo adı
+      'forms_2', // Tablo adı
       form.toMap(),
       where: 'num = ?',
       whereArgs: [form.num],
@@ -174,5 +243,129 @@ class DatabaseHelper {
       }
     }
     return null; // Eğer form bulunamazsa null döndür
+  }
+
+  Future<void> insertProje(ProjeModel proje) async {
+    final db = await database;
+    await db.insert(
+      'projeler4',
+      proje.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<ProjeModel>> getProjeler() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('projeler4');
+
+    return List.generate(maps.length, (i) {
+      return ProjeModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<void> insertProjeGorevi(
+      String? projeId, ProjeGoreviModel gorev) async {
+    final db = await database;
+    await db.insert(
+      'asama',
+      gorev.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<ProjeGoreviModel>> getProjeGorevleri(String? projeId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'asama',
+      where: 'projeId = ?',
+      whereArgs: [projeId],
+      orderBy: 'eklemeTarihi ASC', // Kronolojik sıralama
+    );
+
+    return List.generate(maps.length, (i) {
+      return ProjeGoreviModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<List<ProjeGoreviModel>> fetchTasks() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'asama',
+      orderBy:
+          'gorevSonTarihi ASC', // Görevleri kronolojik sıraya göre sıralama
+    );
+    return List.generate(maps.length, (i) {
+      return ProjeGoreviModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<void> updateProje(
+      ProjeModel proje, Map<String, dynamic> fields) async {
+    final db = await database;
+
+    // Eğer 'isFinish' varsa, bunu int'e dönüştür
+    if (fields.containsKey('isFinish') && fields['isFinish'] is bool) {
+      fields['isFinish'] = fields['isFinish'] ? 1 : 0; // bool to int
+    }
+
+    await db.update(
+      'projeler4',
+      fields,
+      where: 'id = ?',
+      whereArgs: [proje.id],
+    );
+  }
+
+  Future<int> deleteProje(String projeId) async {
+    final db = await database;
+
+    // Önce proje görevlerini sil
+    await db.delete(
+      'asama',
+      where: 'projeId = ?',
+      whereArgs: [projeId],
+    );
+
+    // Ardından projeyi sil
+    return await db.delete(
+      'projeler4',
+      where: 'id = ?',
+      whereArgs: [projeId],
+    );
+  }
+
+  Future<void> updateProjeGorevi(ProjeGoreviModel gorev) async {
+    final db = await database;
+
+    await db.update(
+      'asama',
+      gorev.toMap(),
+      where: 'id = ?',
+      whereArgs: [gorev.id],
+    );
+  }
+
+  Future<int> deleteGorev(String gorevId) async {
+    final db = await database;
+
+    return await db.delete(
+      'asama',
+      where: 'id = ?',
+      whereArgs: [gorevId],
+    );
+  }
+
+  Future<void> insertNot(NotModel not) async {
+    final db = await database;
+    await db.insert('note', not.toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+  }
+
+  Future<int> deleteNote(String id) async {
+    final db = await database;
+    return await db.delete(
+      'note',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
