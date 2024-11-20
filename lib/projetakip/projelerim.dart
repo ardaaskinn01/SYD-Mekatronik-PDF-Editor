@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pdf_editor/databaseHelper.dart';
 import 'package:pdf_editor/projetakip/projeModel.dart';
+import 'projeNakit.dart';
 import 'projeProfil.dart';
 import 'package:intl/intl.dart';
 
@@ -35,18 +36,18 @@ class _ProjelerimState extends State<Projelerim>
       });
   }
 
-  Widget _buildProjeGrid(List<ProjeModel> projeler) {
+  Widget _buildProjeGrid(List<ProjeModel> projeler, {bool isNakitAkisi = false}) {
     return projeler.isEmpty
         ? Center(
-            child: Text(
-              'Henüz bu kategoride projeniz yok',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-            ),
-          )
+      child: Text(
+        'Henüz bu kategoride projeniz yok',
+        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+      ),
+    )
         : GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.2, // Kartların daha küçük görünmesi için artırıldı
+        childAspectRatio: 1.2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -55,12 +56,22 @@ class _ProjelerimState extends State<Projelerim>
         final proje = projeler[index];
         return GestureDetector(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProjeProfil(proje: proje),
-              ),
-            );
+            // Eğer nakit akışı sekmesindeysek projeNakit sayfasına yönlen
+            if (isNakitAkisi) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProjeNakit(projeId: proje.id!),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProjeProfil(proje: proje),
+                ),
+              );
+            }
           },
           onLongPress: () {
             _showOptionsDialog(proje);
@@ -72,12 +83,12 @@ class _ProjelerimState extends State<Projelerim>
             ),
             shadowColor: Colors.teal[200],
             child: Padding(
-              padding: const EdgeInsets.all(5.0), // Daha kompakt bir görünüm için azaltıldı
+              padding: const EdgeInsets.all(5.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center, // Yatayda ortalama
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center, // Yatayda ortalama
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.folder,
@@ -89,7 +100,7 @@ class _ProjelerimState extends State<Projelerim>
                         child: Text(
                           proje.projeIsmi,
                           style: const TextStyle(
-                            fontSize: 14, // Daha küçük yazı boyutu
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -131,26 +142,31 @@ class _ProjelerimState extends State<Projelerim>
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 25),
                   Text(
                     proje.musteriIsmi,
                     style: TextStyle(
-                      fontSize: 12, // Daha küçük yazı boyutu
+                      fontSize: 12,
                       color: Colors.black87,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center, // Metni yatayda ortalama
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 35),
                   Text(
-                    proje.isFinish == false ? "Devam Ediyor" : "Tamamlandı", // Durum yazısı
+                    proje.isFinish == false
+                        ? "Devam Ediyor"
+                        : "Tamamlandı",
                     style: TextStyle(
                       fontSize: 14,
-                      color: proje.isFinish == false ? Colors.orange : Colors.green, // Renk duruma göre
+                      color: proje.isFinish == false
+                          ? Colors.orange
+                          : Colors.green,
                       fontWeight: FontWeight.bold,
                     ),
-                    textAlign: TextAlign.center, // Metni yatayda ortalama
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -159,7 +175,6 @@ class _ProjelerimState extends State<Projelerim>
         );
       },
     );
-
   }
 
   void _showOptionsDialog(ProjeModel proje) {
@@ -174,7 +189,7 @@ class _ProjelerimState extends State<Projelerim>
               children: [
                 ListTile(
                   leading:
-                      const Icon(Icons.delete, color: Colors.red, size: 32),
+                  const Icon(Icons.delete, color: Colors.red, size: 32),
                   title: const Text('Projeyi Sil'),
                   onTap: () {
                     _silProje(proje.id!);
@@ -183,18 +198,25 @@ class _ProjelerimState extends State<Projelerim>
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.check_circle,
-                      color: Colors.green, size: 32),
-                  title: const Text('Projeyi Bitir'),
+                  leading: Icon(
+                    proje.isFinish ? Icons.replay : Icons.check_circle,
+                    color: proje.isFinish ? Colors.blue : Colors.green,
+                    size: 32,
+                  ),
+                  title: Text(proje.isFinish ? 'Projeye Devam Et' : 'Projeyi Bitir'),
                   onTap: () {
-                    _bitirProje(proje);
+                    if (proje.isFinish) {
+                      _devamEttirProje(proje);
+                    } else {
+                      _bitirProje(proje);
+                    }
                     Navigator.of(context).pop();
                   },
                 ),
                 const Divider(),
                 ListTile(
                   leading:
-                      const Icon(Icons.cancel, color: Colors.grey, size: 32),
+                  const Icon(Icons.cancel, color: Colors.grey, size: 32),
                   title: const Text('İptal'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -224,6 +246,17 @@ class _ProjelerimState extends State<Projelerim>
     }
   }
 
+  Future<void> _devamEttirProje(ProjeModel proje) async {
+    try {
+      await _dbHelper.updateProje(proje, {'isFinish': 0});
+      _fetchProjeler();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proje devam ettirilemedi: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,7 +276,7 @@ class _ProjelerimState extends State<Projelerim>
         children: [
           _buildProjeGrid(_devamEdenProjeler),
           _buildProjeGrid(_tamamlananProjeler),
-          _buildProjeGrid(_tumProjeler),
+          _buildProjeGrid(_tumProjeler, isNakitAkisi: true), // Nakit Akışı
         ],
       ),
     );

@@ -87,30 +87,34 @@ class _ProjeProfilState extends State<ProjeProfil> {
             SizedBox(height: 16),
             _buildSectionTitle("Aşamalar"),
             _buildTaskList(),
-            ElevatedButton.icon(
-              onPressed: () {
-                final gorevAdi = 'Aşama ${projeGorevleri.length + 1}';
-                final currentDate = DateTime.now();
-                final gorev = ProjeGoreviModel(
-                  id: DateTime.now().toString(),
-                  projeId: proje.id!,
-                  gorevAdi: gorevAdi,
-                  eklemeTarihi: currentDate,
-                );
+            if (!proje.isFinish) // Butonu gizlemek için kontrol
+              ElevatedButton.icon(
+                onPressed: () {
+                  final gorevAdi = 'Aşama ${projeGorevleri.length + 1}';
+                  final currentDate = DateTime.now();
+                  final gorev = ProjeGoreviModel(
+                    id: DateTime.now().toString(),
+                    projeId: proje.id!,
+                    gorevAdi: gorevAdi,
+                    eklemeTarihi: currentDate,
+                  );
 
-                setState(() {
-                  projeGorevleri.add(gorev); // Yeni görev ekleniyor
-                });
+                  setState(() {
+                    projeGorevleri.add(gorev); // Yeni görev ekleniyor
+                  });
 
-                // Görevi veritabanına ekliyoruz
-                DatabaseHelper().insertProjeGorevi(proje.id, gorev);
+                  // Görevi veritabanına ekliyoruz
+                  DatabaseHelper().insertProjeGorevi(proje.id, gorev);
 
-                // Sayfayı yenileyerek yeni görevi göstermek için
-                _loadProjeGorevleri();
-              },
-              icon: Icon(Icons.add, color: Colors.black),
-              label: Text('Aşama Ekle', style: TextStyle(fontSize: 14, color: Colors.black),),
-            ),
+                  // Sayfayı yenileyerek yeni görevi göstermek için
+                  _loadProjeGorevleri();
+                },
+                icon: Icon(Icons.add, color: Colors.black),
+                label: Text(
+                  'Aşama Ekle',
+                  style: TextStyle(fontSize: 14, color: Colors.black),
+                ),
+              ),
           ],
         ),
       ),

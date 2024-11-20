@@ -33,15 +33,28 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 24, // Increment database version
+      version: 28, // Increment database version
       onCreate: (Database db, int version) async {
         await _createTables(db);
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         print("Database upgrade from version $oldVersion to $newVersion");
 
-        if (oldVersion < 24) { // Assuming projeler4 was introduced in version 9
-          await _createTables(db);
+        if (oldVersion < 28) { // 26 versiyonunda odeme tablosu ekleniyor
+          await db.execute(
+            'CREATE TABLE IF NOT EXISTS odeme2('
+                'id TEXT PRIMARY KEY, '
+                'projeId TEXT, '
+                'miktar TEXT, '
+                'birim TEXT, '
+                'eklemeTarihi TEXT '
+                ')',
+          );
+        }
+
+        // Eski sürümlerde başka güncellemeler yapıldıysa onları da kontrol edin
+        if (oldVersion < 27) {
+          await _createTables(db); // Eski tabloların tamamını yeniden oluşturabilirsiniz
         }
       },
     );
@@ -364,6 +377,30 @@ class DatabaseHelper {
     final db = await database;
     return await db.delete(
       'note',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> insertOdeme(Map<String, dynamic> odeme) async {
+    final db = await database;
+    await db.insert('odeme2', odeme);
+  }
+
+  Future<void> updateOdeme(Map<String, dynamic> odeme) async {
+    final db = await database;
+    await db.update('odeme2', odeme, where: 'id = ?', whereArgs: [odeme['id']]);
+  }
+
+  Future<List<Map<String, dynamic>>> getOdemelerByProjeId(String projeId) async {
+    final db = await database;
+    return await db.query('odeme2', where: 'projeId = ?', whereArgs: [projeId]);
+  }
+
+  Future<int> deleteOdeme(String id) async {
+    final db = await database;
+    return await db.delete(
+      'odeme2',
       where: 'id = ?',
       whereArgs: [id],
     );
