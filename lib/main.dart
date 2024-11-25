@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'mainPage.dart';
-import 'package:intl/intl.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  navigatorKey: navigatorKey;
   runApp(MyApp());
 }
 
@@ -25,11 +27,27 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/*
-veritabanı revize edilecek.
-projeprofil ekranına aşama sistemi getirilip görsel-belge-not-malzemeler oraya aktarılacak.
-aşama sayfası oluşturulacak
-aşamada görsel belge notlar malzemeler önizlenip onlara özel ekranlar altta dörtlü olarak oluşturulacak
-foto eklerken kamera seçeneği çıkacak
-projeyi tamamla butonu eklenip butona basıldığında proje tamamlanan projelere aktarılacak
- */
+class GlobalBackground extends StatelessWidget {
+  final Widget child;
+
+  const GlobalBackground({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: const AssetImage('assets/images/logo2.jpeg'),
+          fit: BoxFit.scaleDown, // Arka planın ekranı tamamen kaplaması için
+          colorFilter: ColorFilter.mode(
+            Colors.grey.withOpacity(0.2),
+            BlendMode.darken,// Karıştırma modu (daha koyu yapmak için)
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: child, // Ekranın içerik kısmı
+      ),
+    );
+  }
+}

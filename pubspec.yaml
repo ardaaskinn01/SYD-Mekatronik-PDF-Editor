@@ -13,6 +13,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   timeline_tile: ^2.0.0
+  workmanager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
@@ -41,9 +42,10 @@ flutter:
 
   assets:
     - assets/images/wallpaper.jpg
-    - assets/images/sydlogo.png
+    - assets/images/acilis.png
     - assets/documents/syd_servis_islem_formu.pdf
     - assets/documents/sydservisformu.pdf
+    - assets/images/logo2.jpeg
 
   fonts:
     - family: Georgia
@@ -53,6 +55,6 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/sydlogo.png"
+  image_path: "assets/images/acilis.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/sydlogo.png"
+  adaptive_icon_foreground: "assets/images/acilis.png"

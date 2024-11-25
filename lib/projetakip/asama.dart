@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:pdf_editor/projetakip/projeModel.dart';
 import '../databaseHelper.dart';
 import 'NotModel.dart';
 import 'ProjeGoreviModel.dart';
@@ -6,11 +9,14 @@ import 'photos.dart'; // Fotoğrafların gösterileceği sayfa
 import 'belge.dart'; // Belgelerin gösterileceği sayfa
 import 'malzeme.dart'; // Malzemelerin gösterileceği sayfa
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Asama extends StatefulWidget {
   final ProjeGoreviModel gorev;
+  final ProjeModel proje;
 
-  Asama({required this.gorev});
+  Asama({required this.gorev, required this.proje});
 
   @override
   _AsamaState createState() => _AsamaState();
@@ -18,11 +24,99 @@ class Asama extends StatefulWidget {
 
 class _AsamaState extends State<Asama> {
   List<NotModel> notlar = [];
+  late String projeIsmi;
+  late String musteriIsmi;
 
   @override
   void initState() {
     super.initState();
     _fetchNotes();
+
+    // Yedekleme işlemini bir sonraki frame'de başlat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _yedekle();
+    });
+  }
+
+  Future<bool> requestPermissions() async {
+    try {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
+      var status2 = await Permission.accessMediaLocation.status;
+      if (!status2.isGranted) {
+        await Permission.accessMediaLocation.request();
+      }
+      var status3 = await Permission.manageExternalStorage.status;
+      if (!status3.isGranted) {
+        await Permission.manageExternalStorage.request();
+      }
+      if (status.isGranted || status2.isGranted || status3.isGranted) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      _showSnackBar("İzin almak için yetki yok. $e");
+      return false;
+    }
+  }
+
+  Future<void> _yedekle() async {
+    bool isAccept = await requestPermissions();
+    try {
+      if (isAccept) {
+        for (var not in notlar) {
+          await _downloadNote(not); // Her bir formu indir
+        }
+      }
+      else {
+        _showSnackBar("İzin hatası:");
+      }
+    } catch (e) {
+      _showSnackBar("Yedekleme hatası: $e");
+    }
+  }
+
+  Future<void> _downloadNote(NotModel not) async {
+    try {
+      // Ana klasör
+      final directoryPath = '/storage/emulated/0/SYD MEKATRONİK';
+      final sydFolder = Directory(directoryPath);
+
+      // Proje için alt klasör oluşturma
+      final projeFolderPath =
+          '${sydFolder.path}/${widget.proje.musteriIsmi}/${widget.proje.projeIsmi}/${widget.gorev.gorevAdi}/Notlar';
+      final projeFolder = Directory(projeFolderPath);
+
+      if (!await projeFolder.exists()) {
+        await projeFolder.create(recursive: true);
+      }
+
+      // Tek bir dosyada notları birleştirme
+      final filePath = '${projeFolder.path}/notlar.txt';
+      final file = File(filePath);
+
+      // Tüm notları bir String'e birleştirme
+      final allNotesContent = notlar.map((not) {
+        final eklemeTarih = eklemeTarihi(not.eklemeTarihi);
+        return "Tarih: $eklemeTarih\nNot: ${not.note}\n---\n";
+      }).join("\n");
+
+      // Dosyaya yazma
+      await file.writeAsString(allNotesContent);
+
+    } catch (e) {
+      _showSnackBar("Notlar kaydedilemedi: $e");
+    }
+  }
+
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _addNot(String noteText) async {
@@ -122,7 +216,7 @@ class _AsamaState extends State<Asama> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhotosPage(asamaId: widget.gorev.id!),
+        builder: (context) => PhotosPage(asamaId: widget.gorev.id!, gorev: widget.gorev, proje: widget.proje),
       ),
     );
   }
@@ -221,7 +315,7 @@ class _AsamaState extends State<Asama> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => BelgePage(asamaId: widget.gorev.id!),
+                          builder: (context) => BelgePage(asamaId: widget.gorev.id!,  gorev: widget.gorev, proje: widget.proje),
                         ),
                       );
                     },
@@ -243,7 +337,7 @@ class _AsamaState extends State<Asama> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MalzemePage(gorevId: widget.gorev.id!),
+                          builder: (context) => MalzemePage(asamaId: widget.gorev.id!, gorev: widget.gorev, proje: widget.proje),
                         ),
                       );
                     },

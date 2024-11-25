@@ -33,28 +33,19 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 28, // Increment database version
+      version: 35, // Increment database version
       onCreate: (Database db, int version) async {
         await _createTables(db);
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         print("Database upgrade from version $oldVersion to $newVersion");
 
-        if (oldVersion < 28) { // 26 versiyonunda odeme tablosu ekleniyor
-          await db.execute(
-            'CREATE TABLE IF NOT EXISTS odeme2('
-                'id TEXT PRIMARY KEY, '
-                'projeId TEXT, '
-                'miktar TEXT, '
-                'birim TEXT, '
-                'eklemeTarihi TEXT '
-                ')',
-          );
+        if (oldVersion < 35) {
+          // 26 versiyonunda odeme tablosu ekleniyor
         }
-
         // Eski sürümlerde başka güncellemeler yapıldıysa onları da kontrol edin
-        if (oldVersion < 27) {
-          await _createTables(db); // Eski tabloların tamamını yeniden oluşturabilirsiniz
+        if (oldVersion < 34) {
+          await _createTables(db);
         }
       },
     );
@@ -63,67 +54,108 @@ class DatabaseHelper {
   Future<void> _createTables(Database db) async {
     await db.execute(
       'CREATE TABLE IF NOT EXISTS forms_4(num TEXT PRIMARY KEY, adSoyad TEXT, adSoyad2 TEXT, adres TEXT, mail TEXT, telefon TEXT, yetkili TEXT, '
-          'islemKisaTanim TEXT, islemDetay TEXT, malzeme TEXT, iscilik TEXT, toplam TEXT, '
-          'montajChecked INTEGER, bakimChecked INTEGER, tamirChecked INTEGER, revizyonChecked INTEGER, '
-          'projeSureciChecked INTEGER, odemeNakitChecked INTEGER, odemeFaturaChecked INTEGER, '
-          'odemeCekChecked INTEGER, odemeKartChecked INTEGER, musteriImza TEXT, yetkiliImza TEXT)',
+      'islemKisaTanim TEXT, islemDetay TEXT, malzeme TEXT, iscilik TEXT, toplam TEXT, '
+      'montajChecked INTEGER, bakimChecked INTEGER, tamirChecked INTEGER, revizyonChecked INTEGER, '
+      'projeSureciChecked INTEGER, odemeNakitChecked INTEGER, odemeFaturaChecked INTEGER, '
+      'odemeCekChecked INTEGER, odemeKartChecked INTEGER, musteriImza TEXT, yetkiliImza TEXT)',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS forms_2(num TEXT PRIMARY KEY, pdfFilePath TEXT, musteriAdSoyad TEXT, tarih TEXT)',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS projeler4('
-          'id TEXT PRIMARY KEY, '
-          'projeIsmi TEXT, '
-          'musteriIsmi TEXT, '
-          'projeAciklama TEXT, '
-          'baslangicTarihi DATETIME, '
-          'isFinish INTEGER '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'projeIsmi TEXT, '
+      'musteriIsmi TEXT, '
+      'projeAciklama TEXT, '
+      'baslangicTarihi DATETIME, '
+      'isFinish INTEGER '
+      ')',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS asama('
-          'id TEXT PRIMARY KEY, '
-          'projeId TEXT, '
-          'gorevAdi TEXT, '
-          'eklemeTarihi TEXT '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'projeId TEXT, '
+      'gorevAdi TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS gorsel('
-          'id TEXT PRIMARY KEY, '
-          'asamaId TEXT, '
-          'gorsel TEXT, '
-          'eklemeTarihi TEXT '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'asamaId TEXT, '
+      'gorsel TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS belge2('
-          'id TEXT PRIMARY KEY, '
-          'asamaId TEXT, '
-          'belge TEXT, '
-          'belgeYolu TEXT, '
-          'eklemeTarihi TEXT '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'asamaId TEXT, '
+      'belge TEXT, '
+      'belgeYolu TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS malzeme('
-          'id TEXT PRIMARY KEY, '
-          'asamaId TEXT, '
-          'malzeme TEXT, '
-          'metin TEXT, '
-          'belgeYolu TEXT, '
-          'eklemeTarihi TEXT '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'asamaId TEXT, '
+      'malzeme TEXT, '
+      'metin TEXT, '
+      'belgeYolu TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
     );
     await db.execute(
       'CREATE TABLE IF NOT EXISTS note('
-          'id TEXT PRIMARY KEY, '
-          'asamaId TEXT, '
-          'note TEXT, '
-          'eklemeTarihi TEXT '
-          ')',
+      'id TEXT PRIMARY KEY, '
+      'asamaId TEXT, '
+      'note TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
     );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS para5('
+      'id TEXT PRIMARY KEY, '
+      'kaynakId TEXT, '
+      'miktar TEXT, '
+      'birim TEXT, '
+      'eklemeTarihi TEXT '
+      ')',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS savedForms ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'adSoyad TEXT, '
+      'email TEXT, '
+      'telefon TEXT, '
+      'adres TEXT '
+      ')',
+    );
+  }
+
+  Future<int> insertForm2(Map<String, dynamic> form) async {
+    final db = await database;
+    return await db.insert('savedForms', form);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllForms() async {
+    final db = await database;
+    return await db.query('savedForms');
+  }
+
+  Future<Map<String, dynamic>?> getFormByAdSoyad(String adSoyad) async {
+    final db = await database;
+    final result = await db.query(
+      'savedForms',
+      where: 'adSoyad = ?',
+      whereArgs: [adSoyad],
+    );
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
   }
 
   Future<void> insertForm3(FormModel3 form) async {
@@ -370,7 +402,11 @@ class DatabaseHelper {
 
   Future<void> insertNot(NotModel not) async {
     final db = await database;
-    await db.insert('note', not.toMap(), conflictAlgorithm: ConflictAlgorithm.replace,);
+    await db.insert(
+      'note',
+      not.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int> deleteNote(String id) async {
@@ -384,23 +420,24 @@ class DatabaseHelper {
 
   Future<void> insertOdeme(Map<String, dynamic> odeme) async {
     final db = await database;
-    await db.insert('odeme2', odeme);
+    await db.insert('para5', odeme);
   }
 
   Future<void> updateOdeme(Map<String, dynamic> odeme) async {
     final db = await database;
-    await db.update('odeme2', odeme, where: 'id = ?', whereArgs: [odeme['id']]);
+    await db.update('para5', odeme, where: 'id = ?', whereArgs: [odeme['id']]);
   }
 
-  Future<List<Map<String, dynamic>>> getOdemelerByProjeId(String projeId) async {
+  Future<List<Map<String, dynamic>>> getOdemelerByProjeId(
+      String projeId) async {
     final db = await database;
-    return await db.query('odeme2', where: 'projeId = ?', whereArgs: [projeId]);
+    return await db.query('para5', where: 'kaynakId = ?', whereArgs: [projeId]);
   }
 
   Future<int> deleteOdeme(String id) async {
     final db = await database;
     return await db.delete(
-      'odeme2',
+      'para5',
       where: 'id = ?',
       whereArgs: [id],
     );

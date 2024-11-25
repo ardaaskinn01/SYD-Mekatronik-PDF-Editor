@@ -152,31 +152,17 @@ class _FormOlusturState extends State<FormOlustur> {
   }
 
   Future<void> saveFormData(FormModel2 form) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Daha önceki kayıtları kontrol et
-    List<String> savedForms = prefs.getStringList('savedForms') ?? [];
-
-    // Yeni formu JSON formatına çevir
-    savedForms.add(jsonEncode(form.toJson()));
-
-    // Yeni listeyi kaydet
-    await prefs.setStringList('savedForms', savedForms);
+    final dbHelper = DatabaseHelper();
+    await dbHelper.insertForm2(form.toMap());
   }
 
   Future<FormModel2?> getFormDataByAdSoyad(String adSoyad) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    List<String> savedForms = prefs.getStringList('savedForms') ?? [];
-
-    for (String formString in savedForms) {
-      final form = FormModel2.fromJson(jsonDecode(formString));
-
-      if (form.adSoyad == adSoyad) {
-        return form; // Eşleşen formu geri döndür
-      }
+    final dbHelper = DatabaseHelper();
+    final formMap = await dbHelper.getFormByAdSoyad(adSoyad);
+    if (formMap != null) {
+      return FormModel2.fromMap(formMap);
     }
-    return null; // Eşleşme bulunmazsa null döndür
+    return null;
   }
 
   Future<Uint8List?> pdfImageFromPdfDocument(pdfx.PdfDocument document) async {
@@ -868,7 +854,6 @@ class _FormOlusturState extends State<FormOlustur> {
                       telefon: telefonController.text,
                       adres: adresController.text,
                     );
-
                     saveFormData(form).then((_) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -952,6 +937,16 @@ class _FormOlusturState extends State<FormOlustur> {
     // Formu veritabanına kaydet
     await dbHelper.insertForm(form);
     await dbHelper.insertForm3(form3);
+    if (!projeSureciChecked) {
+      final yeniOdeme = {
+        'id': DateTime.now().toIso8601String(),
+        'kaynakId': num,
+        'miktar': toplamController.text,
+        'birim': 'TRY',
+        'eklemeTarihi': DateTime.now().toIso8601String(),
+      };
+      await dbHelper.insertOdeme(yeniOdeme);
+    }
 
     // SnackBar ile mesaj göster
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1011,8 +1006,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     maxScale: 1.0,  // En büyük yakınlaştırma
                   ),
                   Positioned(
-                    top: boxHeight * 0.194,
-                    left: boxWidth * 0.15,
+                    top: boxHeight * 0.185,
+                    left: boxWidth * 0.155,
                     child: Text(
                       adSoyadController.text,
                       style: const TextStyle(
@@ -1024,8 +1019,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.273,
-                    left: boxWidth * 0.15,
+                    top: boxHeight * 0.258,
+                    left: boxWidth * 0.155,
                     child: Text(
                       adresController.text,
                       style: const TextStyle(
@@ -1037,8 +1032,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.252,
-                    left: boxWidth * 0.15,
+                    top: boxHeight * 0.24,
+                    left: boxWidth * 0.155,
                     child: Text(
                       mailController.text,
                       style: const TextStyle(
@@ -1050,8 +1045,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.231,
-                    left: boxWidth * 0.15,
+                    top: boxHeight * 0.222,
+                    left: boxWidth * 0.155,
                     child: Text(
                       telefonController.text,
                       style: const TextStyle(
@@ -1063,8 +1058,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.307,
-                    left: boxWidth * 0.15,
+                    top: boxHeight * 0.2915,
+                    left: boxWidth * 0.165,
                     child: Text(
                       yetkiliController.text,
                       style: const TextStyle(
@@ -1076,8 +1071,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.357,
-                    left: boxWidth * 0.05,
+                    top: boxHeight * 0.339,
+                    left: boxWidth * 0.075,
                     child: Text(
                       islemKisaTanimController.text,
                       style: const TextStyle(
@@ -1089,14 +1084,14 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.409,
-                    left: boxWidth * 0.05, // Genel left değeri
+                    top: boxHeight * 0.39,
+                    left: boxWidth * 0.075, // Genel left değeri
                     child: SizedBox(
                       width: boxWidth * 0.8,
                       child: Text(
                         islemDetayController.text,
                         style: const TextStyle(
-                          fontSize: 8.5,
+                          fontSize: 8.49,
                           fontFamily: 'Georgia',
                           color: Color(0xFF040B47),
                           fontWeight: FontWeight.w600,
@@ -1106,8 +1101,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.81,
-                    left: boxWidth * 0.3,
+                    top: boxHeight * 0.766,
+                    left: boxWidth * 0.31,
                     child: Text(
                       yetkiliController.text,
                       style: const TextStyle(
@@ -1119,8 +1114,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.81,
-                    left: boxWidth * 0.687,
+                    top: boxHeight * 0.766,
+                    left: boxWidth * 0.677,
                     child: Text(
                       adSoyad2Controller.text,
                       style: const TextStyle(
@@ -1132,8 +1127,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.74,
-                    left: boxWidth * 0.135,
+                    top: boxHeight * 0.7025,
+                    left: boxWidth * 0.15,
                     child: Text(
                       malzemeController.text,
                       style: const TextStyle(
@@ -1145,8 +1140,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.74,
-                    left: boxWidth * 0.36,
+                    top: boxHeight * 0.7025,
+                    left: boxWidth * 0.362,
                     child: Text(
                       iscilikController.text,
                       style: const TextStyle(
@@ -1158,8 +1153,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.742,
-                    left: boxWidth * 0.765,
+                    top: boxHeight * 0.7025,
+                    left: boxWidth * 0.746,
                     child: Text(
                       toplamController.text,
                       style: const TextStyle(
@@ -1172,8 +1167,8 @@ class _FormOlusturState extends State<FormOlustur> {
                   ),
                   // Checkbox işaretleri
                   Positioned(
-                    top: boxHeight * 0.78, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.2375, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.7387, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.25, // Yüzdelik konuma göre left
                     child: montajChecked
                         ? const Icon(
                             Icons.clear,
@@ -1183,8 +1178,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8105, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.2375, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.7537, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.25, // Yüzdelik konuma göre left
                     child: bakimChecked
                         ? const Icon(
                             Icons.clear,
@@ -1194,8 +1189,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.79525,
-                    left: boxWidth * 0.2375,
+                    top: boxHeight * 0.7687,
+                    left: boxWidth * 0.25,
                     child: tamirChecked
                         ? const Icon(
                             Icons.clear,
@@ -1205,8 +1200,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8275,
-                    left: boxWidth * 0.2375,
+                    top: boxHeight * 0.7837,
+                    left: boxWidth * 0.25,
                     child: revizyonChecked
                         ? const Icon(
                             Icons.clear,
@@ -1216,8 +1211,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8421,
-                    left: boxWidth * 0.2375,
+                    top: boxHeight * 0.798,
+                    left: boxWidth * 0.25,
                     child: projeSureciChecked
                         ? const Icon(
                             Icons.clear,
@@ -1227,8 +1222,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8675,
-                    left: boxWidth * 0.2357,
+                    top: boxHeight * 0.822,
+                    left: boxWidth * 0.2482,
                     child: odemeNakitChecked
                         ? const Icon(
                             Icons.clear,
@@ -1238,8 +1233,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.899,
-                    left: boxWidth * 0.2357,
+                    top: boxHeight * 0.8369,
+                    left: boxWidth * 0.2482,
                     child: odemeFaturaChecked
                         ? const Icon(
                             Icons.clear,
@@ -1249,8 +1244,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.9135,
-                    left: boxWidth * 0.2357,
+                    top: boxHeight * 0.8518,
+                    left: boxWidth * 0.2482,
                     child: odemeCekChecked
                         ? const Icon(
                             Icons.clear,
@@ -1260,8 +1255,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8835,
-                    left: boxWidth * 0.2357,
+                    top: boxHeight * 0.86667,
+                    left: boxWidth * 0.2482,
                     child: odemeKartChecked
                         ? const Icon(
                             Icons.clear,
@@ -1271,8 +1266,8 @@ class _FormOlusturState extends State<FormOlustur> {
                         : const SizedBox.shrink(),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8475, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.303, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.80, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.31, // Yüzdelik konuma göre left
                     child: Container(
                       width: boxWidth * 0.004, // İmza alanının genişliği
                       height: boxHeight * 0.008, // İmza alanının yüksekliği
@@ -1289,8 +1284,8 @@ class _FormOlusturState extends State<FormOlustur> {
                     ),
                   ),
                   Positioned(
-                    top: boxHeight * 0.8465, // Yüzdelik konuma göre top
-                    left: boxWidth * 0.668, // Yüzdelik konuma göre left
+                    top: boxHeight * 0.80, // Yüzdelik konuma göre top
+                    left: boxWidth * 0.67, // Yüzdelik konuma göre left
                     child: Container(
                       width: boxWidth * 0.004, // İmza alanının genişliği
                       height: boxHeight * 0.008, // İmza alanının yüksekliği

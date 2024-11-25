@@ -11,21 +11,21 @@ class FormModel2 {
     required this.adres,
   });
 
-  // JSON'a dönüştürme işlemleri için
-  Map<String, dynamic> toJson() => {
-    'adSoyad': adSoyad,
-    'mail': mail,
-    'telefon': telefon,
-    'adres': adres,
-  };
+  Map<String, dynamic> toMap() {
+    return {
+      'adSoyad': adSoyad,
+      'email': mail,
+      'telefon': telefon,
+      'adres': adres,
+    };
+  }
 
-  // JSON'dan FormModel oluşturma
-  factory FormModel2.fromJson(Map<String, dynamic> json) {
+  static FormModel2 fromMap(Map<String, dynamic> map) {
     return FormModel2(
-      adSoyad: json['adSoyad'],
-      mail: json['mail'],
-      telefon: json['telefon'],
-      adres: json['adres'],
+      adSoyad: map['adSoyad'],
+      mail: map['email'],
+      telefon: map['telefon'],
+      adres: map['adres'],
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pdf_editor/databaseHelper.dart';
 import 'package:pdf_editor/projetakip/projeModel.dart';
 
+import '../main.dart';
+
 class ProjeEkle extends StatefulWidget {
   @override
   _ProjeEkleState createState() => _ProjeEkleState();
@@ -93,67 +95,65 @@ class _ProjeEkleState extends State<ProjeEkle> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white12.withOpacity(0.9),
       appBar: AppBar(
         title: const Text('Proje Ekle'),
         backgroundColor: Colors.teal,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Proje Bilgileri",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              _buildTextField(
-                controller: _projeIsmiController,
-                label: 'Proje İsmi',
-                hintText: 'Proje İsmini Girin',
-              ),
-              _buildTextField(
-                controller: _musteriIsmiController,
-                label: 'Proje Sahibi Firma',
-                hintText: 'Proje Sahibi Firmayı Girin',
-              ),
-              _buildTextField(
-                controller: _projeAciklamaController,
-                label: 'Proje Açıklaması',
-                hintText: 'Proje Açıklamasını Girin',
-                maxLines: 3,
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                "Proje Tarihi",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              _buildDatePicker(
-                label: _baslangicTarihi == null
-                    ? 'Başlangıç Tarihi Seç'
-                    : 'Başlangıç Tarihi: ${formatDateTurkish(_baslangicTarihi!)}',
-                onTap: () => _selectDate(context, true),
-              ),
-              const SizedBox(height: 150),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _saveProje,
-                  child: const Text('Kaydet', style: TextStyle(fontSize: 16, color: Colors.white),),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                    backgroundColor: Colors.teal,
+      body: GlobalBackground(  // Burada GlobalBackground'ı ekliyoruz
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTextField(
+                  controller: _projeIsmiController,
+                  label: 'Proje İsmi',
+                  hintText: 'Proje İsmini Girin',
+                ),
+                _buildTextField(
+                  controller: _musteriIsmiController,
+                  label: 'Proje Sahibi Firma',
+                  hintText: 'Proje Sahibi Firmayı Girin',
+                ),
+                _buildTextField(
+                  controller: _projeAciklamaController,
+                  label: 'Proje Açıklaması',
+                  hintText: 'Proje Açıklamasını Girin',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 180),
+                const Divider(),
+                const SizedBox(height: 20),
+                const Divider(),
+                _buildDatePicker(
+                  label: _baslangicTarihi == null
+                      ? 'Başlangıç Tarihi Seç'
+                      : 'Başlangıç Tarihi: ${formatDateTurkish(_baslangicTarihi!)}',
+                  onTap: () => _selectDate(context, true),
+                ),
+                const Divider(),
+                const SizedBox(height: 70),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _saveProje,
+                    child: const Text('Kaydet', style: TextStyle(fontSize: 16, color: Colors.white),),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      backgroundColor: Colors.teal,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -161,22 +161,26 @@ class _ProjeEkleState extends State<ProjeEkle> {
     String? hintText,
     int maxLines = 1,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          border: const OutlineInputBorder(),
+    return Opacity(
+      opacity: 1, // Şeffaflık seviyesi (0.0 tamamen şeffaf, 1.0 tamamen opak)
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10.0),
+        child: TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hintText,
+            filled: true, // Dolgu arka planını etkinleştirir
+            fillColor: Colors.white.withOpacity(0.2), // Arka plan rengi şeffaf
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Lütfen $label girin';
+            }
+            return null;
+          },
+          maxLines: maxLines,
         ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Lütfen $label girin';
-          }
-          return null;
-        },
-        maxLines: maxLines,
       ),
     );
   }

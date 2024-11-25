@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf_editor/projetakip/projeModel.dart';
 import 'ProjeGoreviModel.dart';
 import '../databaseHelper.dart';
 import 'asama.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ProjeProfil extends StatefulWidget {
   final ProjeModel proje;
@@ -25,12 +28,84 @@ class _ProjeProfilState extends State<ProjeProfil> {
     _loadProjeGorevleri();
   }
 
+  Future<bool> requestPermissions() async {
+    try {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
+      var status2 = await Permission.accessMediaLocation.status;
+      if (!status2.isGranted) {
+        await Permission.accessMediaLocation.request();
+      }
+      var status3 = await Permission.manageExternalStorage.status;
+      if (!status3.isGranted) {
+        await Permission.manageExternalStorage.request();
+      }
+      if (status.isGranted || status2.isGranted || status3.isGranted) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      _showSnackBar("İzin almak için yetki yok. $e");
+      return false;
+    }
+  }
+
+  Future<void> _yedekle() async {
+    bool isAccept = await requestPermissions();
+    try {
+      // İzin kontrolü
+      if (isAccept) {
+        final directoryPath =
+            '/storage/emulated/0/SYD MEKATRONİK/${proje.musteriIsmi}/${proje
+            .projeIsmi}';
+        final sydFolder = Directory(directoryPath);
+
+        // Veritabanındaki formları listeleme
+        final asamalar = projeGorevleri; // Veritabanındaki formlar
+
+        for (var asama in asamalar) {
+          await _createDirectory(asama, sydFolder); // Her bir formu indir
+        }
+      }
+      else {
+        _showSnackBar("İzin hatası:");
+      }
+    } catch (e) {
+      _showSnackBar("Yedekleme hatası: $e");
+    }
+  }
+
+  Future<void> _createDirectory(ProjeGoreviModel asama, Directory sydFolder) async {
+    try {
+
+      final projeFolderPath3 = '${sydFolder.path}/${asama.gorevAdi}';
+      final projeFolder3 = Directory(projeFolderPath3);
+
+      if (!await projeFolder3.exists()) {
+        await projeFolder3.create(recursive: true);
+        _showSnackBar("${asama.gorevAdi} için klasör oluşturuldu.");
+      }
+    } catch (e) {
+      _showSnackBar("${asama.gorevAdi} için klasör oluşturulamadı: $e");
+    }
+  }
+
+    void _showSnackBar(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+
   // Proje görevlerini veritabanından yükleme
   void _loadProjeGorevleri() async {
     final gorevler = await DatabaseHelper().getProjeGorevleri(proje.id);
     setState(() {
       projeGorevleri = gorevler;
     });
+    _yedekle();
   }
 
   String formatDateTurkish(DateTime? date) {
@@ -166,22 +241,52 @@ class _ProjeProfilState extends State<ProjeProfil> {
   void silGorev(int index) async {
     final gorevId = projeGorevleri[index].id!;
 
-    // Veritabanından silme
-    await DatabaseHelper().deleteGorev(gorevId);
+    // Kullanıcıya onay sormak için bir pop-up dialog göster
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Aşama Sil'),
+          content: Text('Bu aşamayı silmek istediğinizden emin misiniz?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // Silme işlemi iptal edilir
+              },
+              child: Text('Hayır'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // Silme işlemi onaylanır
+              },
+              child: Text('Evet'),
+            ),
+          ],
+        );
+      },
+    );
 
-    // Görevi listeden ve veritabanından sil
-    setState((){
-      projeGorevleri.removeAt(index);
-    });
+    // Eğer kullanıcı "Evet" derse, silme işlemini gerçekleştir
+    if (confirmDelete ?? false) {
+      // Veritabanından silme
+      await DatabaseHelper().deleteGorev(gorevId);
 
-    // Aşama numaralarını yeniden düzenle
-    for (int i = 0; i < projeGorevleri.length; i++) {
-      projeGorevleri[i].gorevAdi = 'Aşama ${i + 1}'; // Numara sıfırlanır
-      await DatabaseHelper().updateProjeGorevi(projeGorevleri[i]); // Güncelleme işlemi
+      // Görevi listeden ve veritabanından sil
+      setState(() {
+        projeGorevleri.removeAt(index);
+      });
+
+      // Aşama numaralarını yeniden düzenle
+      for (int i = 0; i < projeGorevleri.length; i++) {
+        projeGorevleri[i].gorevAdi = 'Aşama ${i + 1}'; // Numara sıfırlanır
+        await DatabaseHelper().updateProjeGorevi(projeGorevleri[i]); // Güncelleme işlemi
+      }
+
+      // Sayfayı yenileyerek görev listesini güncelle
+      _loadProjeGorevleri();
     }
-    // Sayfayı yenileyerek görev listesini güncelle
-    _loadProjeGorevleri();
   }
+
 
   Widget _buildTaskList() {
     return FutureBuilder<List<ProjeGoreviModel>>(
@@ -231,7 +336,7 @@ class _ProjeProfilState extends State<ProjeProfil> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => Asama(gorev: gorev),
+                      builder: (context) => Asama(gorev: gorev, proje: widget.proje),
                     ),
                   );
                 },

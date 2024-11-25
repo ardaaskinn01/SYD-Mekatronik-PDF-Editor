@@ -33,7 +33,7 @@ class _ProjeNakitState extends State<ProjeNakit> {
     final TextEditingController miktarController = TextEditingController(
       text: odeme?['miktar'] ?? '',
     );
-    String seciliBirim = odeme?['birim'] ?? 'TL';
+    String seciliBirim = odeme?['birim'] ?? 'TRY';
     DateTime? seciliTarih = odeme?['eklemeTarihi'] != null
         ? DateTime.parse(odeme!['eklemeTarihi'])
         : null;
@@ -58,7 +58,7 @@ class _ProjeNakitState extends State<ProjeNakit> {
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: seciliBirim,
-                  items: ['TL', 'USD', 'EURO'].map((birim) {
+                  items: ['TRY', 'USD', 'EUR'].map((birim) {
                     return DropdownMenuItem(
                       value: birim,
                       child: Text(birim),
@@ -102,8 +102,8 @@ class _ProjeNakitState extends State<ProjeNakit> {
             ElevatedButton(
               onPressed: () async {
                 final yeniOdeme = {
-                  'id': odeme?['id'] ?? _uuid.v4(),
-                  'projeId': widget.projeId,
+                  'id': DateTime.now().toIso8601String(),
+                  'kaynakId': widget.projeId,
                   'miktar': miktarController.text,
                   'birim': seciliBirim,
                   'eklemeTarihi': seciliTarih?.toIso8601String() ??

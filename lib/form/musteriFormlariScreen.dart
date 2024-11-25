@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:open_file/open_file.dart';
 
 class MusteriFormlariScreen extends StatelessWidget {
   final String musteriAdSoyad;
@@ -57,37 +58,20 @@ class MusteriFormlariScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _showFormDialog(BuildContext context, FormModel form) async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: Container(
-            width: 400,
-            height: 500,
-            child: PDFView(
-              filePath: form.pdfFilePath,
-              enableSwipe: true,
-              swipeHorizontal: true,
-              autoSpacing: false,
-              pageFling: false,
-              onRender: (pages) => print("Toplam sayfa sayısı: $pages"),
-              onError: (error) => print(error.toString()),
-              onPageError: (page, error) =>
-                  print('$page. sayfada hata: $error'),
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: Text('Kapat'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+  Future<void> _openFormWithDefaultApp(FormModel form, context) async {
+    try {
+      final result = await OpenFile.open(form.pdfFilePath);
+      if (result.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF açılamadı: ${result.message}')),
         );
-      },
-    );
+      }
+    } catch (e) {
+      print('PDF açma hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF açılamadı!')),
+      );
+    }
   }
 
   Future<void> _downloadForm(BuildContext context, FormModel form) async {
@@ -124,78 +108,91 @@ class MusteriFormlariScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white12.withOpacity(0.9),
       appBar: AppBar(
         title: Text('$musteriAdSoyad - Formlar'),
         backgroundColor: Colors.teal,
       ),
-      body: ListView.builder(
-        padding: EdgeInsets.all(10),
-        itemCount: forms.length,
-        itemBuilder: (context, index) {
-          final form = forms[index];
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/logo2.jpeg'),
+            fit: BoxFit.contain,
+            colorFilter: ColorFilter.mode(
+              Colors.grey.withOpacity(1),
+              BlendMode.darken,
+            ),
+          ),
+        ),
+        child: ListView.builder(
+          padding: EdgeInsets.all(10),
+          itemCount: forms.length,
+          itemBuilder: (context, index) {
+            final form = forms[index];
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: ListTile(
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                leading: Icon(Icons.picture_as_pdf,
-                    color: Colors.redAccent, size: 36),
-                title: Text(
-                  'Seri No: ${form.num}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black87,
-                  ),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Card(
+                elevation: 5,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_today,
-                          size: 16, color: Colors.black54),
-                      SizedBox(width: 5),
-                      Text(
-                        form.tarih,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
+                child: ListTile(
+                  contentPadding:
+                  EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  leading: Icon(Icons.picture_as_pdf,
+                      color: Colors.redAccent, size: 36),
+                  title: Text(
+                    'Seri No: ${form.num}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today,
+                            size: 16, color: Colors.black54),
+                        SizedBox(width: 5),
+                        Text(
+                          form.tarih,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.teal),
+                        onPressed: () => _editForm(context, form),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.share, color: Colors.teal),
+                        onPressed: () => _shareForm(form),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.download, color: Colors.teal),
+                        onPressed: () =>
+                            _downloadForm(context, form), // İndirme butonu
                       ),
                     ],
                   ),
+                  onTap: () {
+                    _openFormWithDefaultApp(form, context);
+                  },
                 ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit, color: Colors.teal),
-                      onPressed: () => _editForm(context, form),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.share, color: Colors.teal),
-                      onPressed: () => _shareForm(form),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.download, color: Colors.teal),
-                      onPressed: () =>
-                          _downloadForm(context, form), // İndirme butonu
-                    ),
-                  ],
-                ),
-                onTap: () {
-                  _showFormDialog(context, form);
-                },
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
