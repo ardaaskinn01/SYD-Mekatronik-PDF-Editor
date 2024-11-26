@@ -142,18 +142,7 @@ class _ProjelerimState extends State<Projelerim>
           ],
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/logo2.jpeg'),
-            fit: BoxFit.contain,
-            colorFilter: ColorFilter.mode(
-              Colors.grey.withOpacity(1),
-              BlendMode.darken,
-            ),
-          ),
-        ),
-        child: SafeArea(
+      body: SafeArea(
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -162,7 +151,6 @@ class _ProjelerimState extends State<Projelerim>
             ],
           ),
         ),
-      ),
     );
   }
 

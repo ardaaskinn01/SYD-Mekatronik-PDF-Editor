@@ -4,16 +4,28 @@ import 'package:pdf_editor/form/formolustur.dart';
 import '../databaseHelper.dart';
 import 'formModel.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:open_file/open_file.dart';
 
-class MusteriFormlariScreen extends StatelessWidget {
+class MusteriFormlariScreen extends StatefulWidget {
   final String musteriAdSoyad;
   final List<FormModel> forms;
 
   MusteriFormlariScreen({required this.musteriAdSoyad, required this.forms});
+
+  @override
+  _MusteriFormlariScreenState createState() => _MusteriFormlariScreenState();
+}
+class _MusteriFormlariScreenState extends State<MusteriFormlariScreen> {
+  late List<FormModel> forms;
+
+  void initState() {
+    super.initState();
+    forms = List.from(widget.forms); // Başlangıçta widget.forms'un bir kopyasını oluştur.
+  }
 
   Future<void> requestPermissions() async {
     var status = await Permission.storage.status;
@@ -105,26 +117,61 @@ class MusteriFormlariScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _deleteForm(BuildContext context, FormModel form) async {
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Formu Sil'),
+          content: Text('Bu formu silmek istediğinizden emin misiniz?'),
+          actions: [
+            TextButton(
+              child: Text('İptal'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: Text('Sil'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      try {
+        await DatabaseHelper().deleteForm(form);
+
+        setState(() {
+          forms.remove(form); // Listedeki formu sil
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Form silindi: ${form.num}')),
+        );
+      } catch (e) {
+        print('Silme hatası: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Form silinemedi!')),
+        );
+      }
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white12.withOpacity(0.9),
       appBar: AppBar(
-        title: Text('$musteriAdSoyad - Formlar'),
+        title: Text('Müşteri Formları'),
         backgroundColor: Colors.teal,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/logo2.jpeg'),
-            fit: BoxFit.contain,
-            colorFilter: ColorFilter.mode(
-              Colors.grey.withOpacity(1),
-              BlendMode.darken,
-            ),
-          ),
-        ),
-        child: ListView.builder(
+      body: ListView.builder(
           padding: EdgeInsets.all(10),
           itemCount: forms.length,
           itemBuilder: (context, index) {
@@ -188,12 +235,12 @@ class MusteriFormlariScreen extends StatelessWidget {
                   onTap: () {
                     _openFormWithDefaultApp(form, context);
                   },
+                  onLongPress: () => _deleteForm(context, form),
                 ),
               ),
             );
           },
         ),
-      ),
     );
   }
 }

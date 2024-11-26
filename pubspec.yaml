@@ -46,6 +46,8 @@ flutter:
     - assets/documents/syd_servis_islem_formu.pdf
     - assets/documents/sydservisformu.pdf
     - assets/images/logo2.jpeg
+    - assets/images/logo1.jpeg
+    - assets/images/logo3.jpeg
 
   fonts:
     - family: Georgia

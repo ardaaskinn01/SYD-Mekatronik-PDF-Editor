@@ -36,10 +36,9 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
 
   // "Aylık Kazanç" ekranı
   Widget _buildAylikKazancScreen() {
-    return FutureBuilder<List<Map<String, dynamic>>>( // Fetch payments from DB
+    return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchOdemeler(),
       builder: (context, snapshot) {
-
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text('Henüz ödeme bulunmuyor.'));
         }
@@ -48,54 +47,52 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
           return Center(child: Text('Hata: ${snapshot.error}'));
         }
 
-        var payments = snapshot.data!;
-        Map<String, List<Map<String, dynamic>>> groupedPayments = {};
+        var payments = snapshot.data ?? [];
+        payments.removeWhere((payment) => payment['isSilinmis'] == 1);
+        Map<String, Map<String, List<Map<String, dynamic>>>> groupedPayments = {};
 
-        // Group payments by year and month
+        // Yıl-Ay bazında ve isForm durumuna göre gruplama
         for (var payment in payments) {
           String yearMonth = payment['eklemeTarihi'].substring(0, 7);
-          if (groupedPayments[yearMonth] == null) {
-            groupedPayments[yearMonth] = [];
+          int isForm = payment['isForm'] ?? 0;
+
+          if (!groupedPayments.containsKey(yearMonth)) {
+            groupedPayments[yearMonth] = {'form': [], 'proje': []};
           }
-          groupedPayments[yearMonth]!.add(payment);
+
+          if (isForm == 1) {
+            groupedPayments[yearMonth]!['form']!.add(payment);
+          } else {
+            groupedPayments[yearMonth]!['proje']!.add(payment);
+          }
         }
 
-        // ListView to display grouped payments
         return ListView.builder(
           itemCount: groupedPayments.keys.length,
           itemBuilder: (context, index) {
             String key = groupedPayments.keys.elementAt(index);
-            List<Map<String, dynamic>> paymentsForMonth = groupedPayments[key]!;
+            var paymentsForMonth = groupedPayments[key]!;
 
-            return FutureBuilder<double>(
-              // Call the async method for total amount calculation
-              future: _calculateTotalAmount(paymentsForMonth),
+            return FutureBuilder<Map<String, Map<String, double>>>(
+              future: _calculateGroupedAmountsDetailed(paymentsForMonth),
               builder: (context, amountSnapshot) {
                 if (amountSnapshot.connectionState == ConnectionState.waiting) {
                   return Card(
                     elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(title: Text("Yükleniyor...")),
                   );
                 }
 
                 if (!amountSnapshot.hasData) {
                   return Card(
                     elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: ListTile(
-                      title: Text("Hata oluştu."),
-                      subtitle: Text("Ödeme verisi alınamadı."),
-                    ),
+                    child: ListTile(title: Text("Hata oluştu.")),
                   );
                 }
 
-                double totalAmount = amountSnapshot.data!;
+                var amounts = amountSnapshot.data!;
                 String formattedDate = _formatDate(key);
 
                 return Card(
@@ -104,16 +101,36 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
                     borderRadius: BorderRadius.circular(15),
                   ),
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    title: Text(
-                      "$formattedDate",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    subtitle: Text("Toplam Ödeme: ${totalAmount.toStringAsFixed(2)} ₺"),
-                    trailing: Icon(
-                      Icons.attach_money,
-                      color: Colors.orange,
-                      size: 30,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
+                        SizedBox(height: 8),
+                        Text("Form Ücretleri (TRY): ${amounts['form']!['TRY']?.toStringAsFixed(2)} ₺"),
+                        SizedBox(height: 8),
+                        Text("Proje Ücretleri (USD): ${amounts['proje']!['USD']?.toStringAsFixed(2)} USD"),
+                        Text("Proje Ücretleri (EUR): ${amounts['proje']!['EUR']?.toStringAsFixed(2)} EUR"),
+                        Text("Proje Ücretleri (TRY): ${amounts['proje']!['TRY']?.toStringAsFixed(2)} ₺"),
+                        SizedBox(height: 8),
+                        Divider(thickness: 1),
+                        FutureBuilder<double>(
+                          future: _calculateTotalInTRY(amounts),
+                          builder: (context, totalSnapshot) {
+                            if (totalSnapshot.connectionState == ConnectionState.waiting) {
+                              return Text("Toplam Ücret: Yükleniyor...");
+                            }
+                            return Text(
+                              "Toplam Ücret: ${totalSnapshot.data?.toStringAsFixed(2)} ₺",
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -125,29 +142,59 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
     );
   }
 
-// Async method to calculate total amount for a list of payments
-  Future<double> _calculateTotalAmount(List<Map<String, dynamic>> paymentsForMonth) async {
-    double totalAmount = 0.0;
-    for (var payment in paymentsForMonth) {
-      try {
-        double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
-        String currency = payment['birim'];
-        double amountInTRY = await CurrencyConverter.convertToTRY(amount, currency);
-        totalAmount += amountInTRY;
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Hata: ${e.toString()}")),
-        );
+// Ödeme miktarlarını detaylı (TRY, USD, EUR) hesaplama
+  Future<Map<String, Map<String, double>>> _calculateGroupedAmountsDetailed(
+      Map<String, List<Map<String, dynamic>>> groupedPayments) async {
+    Map<String, double> formAmounts = {'USD': 0.0, 'EUR': 0.0, 'TRY': 0.0};
+    Map<String, double> projeAmounts = {'USD': 0.0, 'EUR': 0.0, 'TRY': 0.0};
+
+    for (var payment in groupedPayments['form']!) {
+      double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
+      String currency = payment['birim'] ?? 'TRY';
+      formAmounts[currency] = (formAmounts[currency] ?? 0) + amount;
+    }
+
+    for (var payment in groupedPayments['proje']!) {
+      double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
+      String currency = payment['birim'] ?? 'TRY';
+      projeAmounts[currency] = (projeAmounts[currency] ?? 0) + amount;
+    }
+
+    return {'form': formAmounts, 'proje': projeAmounts};
+  }
+
+// Detaylı verileri toplam TRY'ye çevirme
+  Future<double> _calculateTotalInTRY(Map<String, Map<String, double>> amounts) async {
+    double total = 0.0;
+
+    for (var category in amounts.keys) {
+      for (var currency in amounts[category]!.keys) {
+        double amount = amounts[category]![currency]!;
+        total += await CurrencyConverter.convertToTRY(amount, currency);
       }
     }
-    return totalAmount;
+
+    return total;
   }
+
+
+// Tek bir ödemeyi TRY'ye çevirme
+  Future<double> _convertPaymentToTRY(Map<String, dynamic> payment) async {
+    try {
+      double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
+      String currency = payment['birim'] ?? 'TRY';
+      return await CurrencyConverter.convertToTRY(amount, currency);
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
 
 
   // Ödemeleri veritabanından çekme
   Future<List<Map<String, dynamic>>> _fetchOdemeler() async {
     final db = await _dbHelper.database;
-    return await db.query('para5');
+    return await db.query('para9', where: 'isSilinmis = ?', whereArgs: [0]);
   }
 
   // Tarih formatını Türkçe yapmak için

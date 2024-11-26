@@ -944,6 +944,8 @@ class _FormOlusturState extends State<FormOlustur> {
         'miktar': toplamController.text,
         'birim': 'TRY',
         'eklemeTarihi': DateTime.now().toIso8601String(),
+        'isForm': 1,
+        'isSilinmis': 0,
       };
       await dbHelper.insertOdeme(yeniOdeme);
     }

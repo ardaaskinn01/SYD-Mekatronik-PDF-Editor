@@ -102,20 +102,22 @@ class _ProjeNakitState extends State<ProjeNakit> {
             ElevatedButton(
               onPressed: () async {
                 final yeniOdeme = {
-                  'id': DateTime.now().toIso8601String(),
+                  'id': odeme?['id'] ?? _uuid.v4(),
                   'kaynakId': widget.projeId,
                   'miktar': miktarController.text,
                   'birim': seciliBirim,
                   'eklemeTarihi': seciliTarih?.toIso8601String() ??
                       DateTime.now().toIso8601String(),
+                  'isForm': 0,
                 };
+
                 if (odeme == null) {
                   await _dbHelper.insertOdeme(yeniOdeme);
                 } else {
                   await _dbHelper.updateOdeme(yeniOdeme);
                 }
                 await _fetchOdemeler();
-                Navigator.of(context).pop();
+                Navigator.pop(context, 'updated'); // Geri dönüş sonucu
               },
               child: const Text('Kaydet'),
             ),
@@ -141,7 +143,7 @@ class _ProjeNakitState extends State<ProjeNakit> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await _dbHelper.deleteOdeme(odeme['id']);
+                await _dbHelper.silOdeme(odeme['id']);
                 await _fetchOdemeler();
                 Navigator.of(context).pop();
               },
@@ -179,9 +181,9 @@ class _ProjeNakitState extends State<ProjeNakit> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nakit Akışı'),
-      ),
+    appBar: AppBar(
+    title: const Text('Nakit Akışı'),
+    ),
       body: Column(
         children: [
           ElevatedButton(

@@ -100,8 +100,7 @@ class _ProjeEkleState extends State<ProjeEkle> {
         title: const Text('Proje Ekle'),
         backgroundColor: Colors.teal,
       ),
-      body: GlobalBackground(  // Burada GlobalBackground'ı ekliyoruz
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
@@ -124,8 +123,6 @@ class _ProjeEkleState extends State<ProjeEkle> {
                   hintText: 'Proje Açıklamasını Girin',
                   maxLines: 3,
                 ),
-                const SizedBox(height: 180),
-                const Divider(),
                 const SizedBox(height: 20),
                 const Divider(),
                 _buildDatePicker(
@@ -135,7 +132,7 @@ class _ProjeEkleState extends State<ProjeEkle> {
                   onTap: () => _selectDate(context, true),
                 ),
                 const Divider(),
-                const SizedBox(height: 70),
+                const SizedBox(height: 100),
                 Center(
                   child: ElevatedButton(
                     onPressed: _saveProje,
@@ -150,7 +147,6 @@ class _ProjeEkleState extends State<ProjeEkle> {
             ),
           ),
         ),
-      ),
     );
   }
 

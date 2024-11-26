@@ -88,7 +88,7 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
 
   Future<void> _downloadForm(FormModel form) async {
     final directoryPath =
-        '/storage/emulated/0/SYD MEKATRONİK/${form.musteriAdSoyad}';
+        '/storage/emulated/0/SYD MEKATRONİK/${form.musteriAdSoyad}/Formlar';
     final sydFolder = Directory(directoryPath);
 
     if (!await sydFolder.exists()) {
@@ -141,6 +141,32 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
     });
   }
 
+  Future<void> deleteCustomerFolder(String musteriAdSoyad) async {
+    final directoryPath = '/storage/emulated/0/SYD MEKATRONİK/$musteriAdSoyad/Formlar';
+    final customerFolder = Directory(directoryPath);
+
+    if (await customerFolder.exists()) {
+      await customerFolder.delete(recursive: true); // Klasörü ve içeriğini siler
+    }
+  }
+
+  Future<void> deleteCustomerAndForms(String musteriAdSoyad) async {
+    try {
+      // Veritabanından sil
+      final deletedCount = await DatabaseHelper().deleteFormsByCustomer(musteriAdSoyad);
+      // Klasörleri sil
+      await deleteCustomerFolder(musteriAdSoyad);
+
+      if (deletedCount > 0) {
+        _showSnackBar('$musteriAdSoyad ve ilgili $deletedCount form başarıyla silindi.');
+      } else {
+        _showSnackBar('Silinecek form bulunamadı.');
+      }
+    } catch (e) {
+      _showSnackBar('Silme hatası: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,18 +175,7 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
         title: Text('Geçmiş Formlar'),
         backgroundColor: Colors.teal,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/logo2.jpeg'),
-            fit: BoxFit.contain,  // Use cover to fill the screen, can adjust as needed
-            colorFilter: ColorFilter.mode(
-              Colors.grey.withOpacity(0.5), // Adjust opacity as needed
-              BlendMode.darken,
-            ),
-          ),
-        ),
-        child: Column(
+      body: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -204,39 +219,50 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
                             ),
                             child: ListTile(
                               contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              leading: Icon(
-                                Icons.folder,
-                                color: Colors.teal,
-                                size: 36,
-                              ),
+                              leading: Icon(Icons.folder, color: Colors.teal, size: 36),
                               title: Text(
                                 musteriAdSoyad,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Colors.black87,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
                               ),
                               subtitle: Text(
                                 '${forms.length} form',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
+                                style: TextStyle(fontSize: 14, color: Colors.black54),
                               ),
-                              trailing: Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.teal,
-                                size: 20,
-                              ),
+                              trailing: Icon(Icons.arrow_forward_ios, color: Colors.teal, size: 20),
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        MusteriFormlariScreen(musteriAdSoyad: musteriAdSoyad, forms: forms),
+                                    builder: (context) => MusteriFormlariScreen(musteriAdSoyad: musteriAdSoyad, forms: forms),
                                   ),
                                 );
+                              },
+                              onLongPress: () async {
+                                final confirm = await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Silme Onayı'),
+                                    content: Text('$musteriAdSoyad ve tüm formları silmek istediğinize emin misiniz?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text('Hayır'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: Text('Evet'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  await deleteCustomerAndForms(musteriAdSoyad);
+                                  setState(() {
+                                    filteredForms.removeWhere((form) => form.musteriAdSoyad == musteriAdSoyad);
+                                    allForms.removeWhere((form) => form.musteriAdSoyad == musteriAdSoyad);
+                                  });
+                                }
                               },
                             ),
                           ),
@@ -249,7 +275,6 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
             ),
           ],
         ),
-      ),
     );
   }
 

@@ -99,6 +99,30 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     }
   }
 
+  void _changePin() async {
+    final savedPin = await _getSavedPin();
+    if (_currentPinController.text == savedPin) {
+      if (_pinController.text == _confirmPinController.text &&
+          _pinController.text.isNotEmpty) {
+        await _savePin(_pinController.text);
+        setState(() {
+          _successText = "PIN başarıyla değiştirildi.";
+          _errorText = null;
+        });
+      } else {
+        setState(() {
+          _errorText = "Yeni PIN'ler eşleşmiyor veya boş olamaz.";
+          _successText = null;
+        });
+      }
+    } else {
+      setState(() {
+        _errorText = "Mevcut PIN yanlış.";
+        _successText = null;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -179,9 +203,60 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => BakiyeKontrolSayfasi()),
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text("PIN Değiştir"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  controller: _currentPinController,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: "Mevcut PIN",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: _pinController,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: "Yeni PIN",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: _confirmPinController,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: "Yeni PIN Tekrar",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("İptal"),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  _changePin();
+                                  Navigator.pop(context);
+                                },
+                                child: const Text("Değiştir"),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
                     child: const Text("PIN Değiştir"),

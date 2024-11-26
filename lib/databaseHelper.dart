@@ -33,18 +33,14 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 35, // Increment database version
+      version: 42, // Increment database version
       onCreate: (Database db, int version) async {
         await _createTables(db);
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         print("Database upgrade from version $oldVersion to $newVersion");
-
-        if (oldVersion < 35) {
-          // 26 versiyonunda odeme tablosu ekleniyor
-        }
         // Eski sürümlerde başka güncellemeler yapıldıysa onları da kontrol edin
-        if (oldVersion < 34) {
+        if (oldVersion < 42) {
           await _createTables(db);
         }
       },
@@ -116,16 +112,18 @@ class DatabaseHelper {
       ')',
     );
     await db.execute(
-      'CREATE TABLE IF NOT EXISTS para5('
+      'CREATE TABLE IF NOT EXISTS para9('
       'id TEXT PRIMARY KEY, '
       'kaynakId TEXT, '
       'miktar TEXT, '
       'birim TEXT, '
-      'eklemeTarihi TEXT '
+      'eklemeTarihi TEXT, '
+      'isForm INTEGER, '
+      'isSilinmis INTEGER'
       ')',
     );
     await db.execute(
-      'CREATE TABLE IF NOT EXISTS savedForms ('
+      'CREATE TABLE IF NOT EXISTS savedForms2 ('
       'id INTEGER PRIMARY KEY AUTOINCREMENT, '
       'adSoyad TEXT, '
       'email TEXT, '
@@ -227,6 +225,24 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> deleteForm(FormModel form) async {
+    final db = await database;
+    return await db.delete(
+      'forms_2', // Tablo adı
+      where: 'num = ?',
+      whereArgs: [form.num],
+    );
+  }
+
+  Future<int> deleteFormsByCustomer(String musteriAdSoyad) async {
+    final db = await database;
+    return await db.delete(
+      'forms_2', // Tablo adı
+      where: 'musteriAdSoyad = ?',
+      whereArgs: [musteriAdSoyad],
+    );
+  }
+
   Future<List<FormModel>> getForms() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('forms_2');
@@ -289,6 +305,8 @@ class DatabaseHelper {
     }
     return null; // Eğer form bulunamazsa null döndür
   }
+
+
 
   Future<void> insertProje(ProjeModel proje) async {
     final db = await database;
@@ -420,26 +438,27 @@ class DatabaseHelper {
 
   Future<void> insertOdeme(Map<String, dynamic> odeme) async {
     final db = await database;
-    await db.insert('para5', odeme);
+    await db.insert('para9', odeme);
   }
 
   Future<void> updateOdeme(Map<String, dynamic> odeme) async {
     final db = await database;
-    await db.update('para5', odeme, where: 'id = ?', whereArgs: [odeme['id']]);
+    await db.update('para9', odeme, where: 'id = ?', whereArgs: [odeme['id']]);
   }
 
   Future<List<Map<String, dynamic>>> getOdemelerByProjeId(
       String projeId) async {
     final db = await database;
-    return await db.query('para5', where: 'kaynakId = ?', whereArgs: [projeId]);
+    return await db.query('para9', where: 'kaynakId = ?', whereArgs: [projeId]);
   }
 
-  Future<int> deleteOdeme(String id) async {
+  Future<void> silOdeme(int odemeId) async {
     final db = await database;
-    return await db.delete(
-      'para5',
+    await db.update(
+      'para9',
+      {'isSilinmis': 1},
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [odemeId],
     );
   }
 }
