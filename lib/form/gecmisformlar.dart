@@ -152,13 +152,14 @@ class _GecmisFormlarState extends State<GecmisFormlar> {
 
   Future<void> deleteCustomerAndForms(String musteriAdSoyad) async {
     try {
-      // Veritabanından sil
-      final deletedCount = await DatabaseHelper().deleteFormsByCustomer(musteriAdSoyad);
+      // Veritabanından formlar ve ödemeleri sil
+      final deletedCount = await DatabaseHelper().deleteFormsAndPaymentsByCustomer(musteriAdSoyad);
+
       // Klasörleri sil
       await deleteCustomerFolder(musteriAdSoyad);
 
       if (deletedCount > 0) {
-        _showSnackBar('$musteriAdSoyad ve ilgili $deletedCount form başarıyla silindi.');
+        _showSnackBar('$musteriAdSoyad ve ilgili $deletedCount form (ve ödemeleri) başarıyla silindi.');
       } else {
         _showSnackBar('Silinecek form bulunamadı.');
       }

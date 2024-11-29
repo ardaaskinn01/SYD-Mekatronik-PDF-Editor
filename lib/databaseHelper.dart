@@ -33,14 +33,14 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 42, // Increment database version
+      version: 43, // Increment database version
       onCreate: (Database db, int version) async {
         await _createTables(db);
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         print("Database upgrade from version $oldVersion to $newVersion");
         // Eski sürümlerde başka güncellemeler yapıldıysa onları da kontrol edin
-        if (oldVersion < 42) {
+        if (oldVersion < 43) {
           await _createTables(db);
         }
       },
@@ -118,8 +118,7 @@ class DatabaseHelper {
       'miktar TEXT, '
       'birim TEXT, '
       'eklemeTarihi TEXT, '
-      'isForm INTEGER, '
-      'isSilinmis INTEGER'
+      'isForm INTEGER '
       ')',
     );
     await db.execute(
@@ -452,13 +451,63 @@ class DatabaseHelper {
     return await db.query('para9', where: 'kaynakId = ?', whereArgs: [projeId]);
   }
 
-  Future<void> silOdeme(int odemeId) async {
+  Future<void> silOdeme(String odemeId) async {
     final db = await database;
-    await db.update(
+    await db.delete(
       'para9',
-      {'isSilinmis': 1},
       where: 'id = ?',
       whereArgs: [odemeId],
+    );
+  }
+
+  Future<void> silOdeme2(String kaynakId) async {
+    final db = await database;
+    await db.delete(
+      'para9',
+      where: 'kaynakId = ?',
+      whereArgs: [kaynakId],
+    );
+  }
+
+  Future<int> deleteFormsAndPaymentsByCustomer(String musteriAdSoyad) async {
+    final db = await database;
+
+    // Transaction başlat
+    return await db.transaction((txn) async {
+      // Önce formların ID'lerini al
+      final formIds = await txn.query(
+        'forms_2',
+        columns: ['num'],
+        where: 'musteriAdSoyad = ?',
+        whereArgs: [musteriAdSoyad],
+      );
+
+      // Form ID'lerini al (eğer yoksa işlem bitir)
+      if (formIds.isEmpty) return 0;
+
+      // Tüm form ID'lerini listeye ekle
+      final idsToDelete = formIds.map((form) => form['num']).toList();
+
+      // Ödeme bilgilerini sil
+      await txn.delete(
+        'para9',
+        where: 'kaynakId IN (${idsToDelete.join(',')})',
+      );
+
+      // Formları sil
+      return await txn.delete(
+        'forms_2',
+        where: 'musteriAdSoyad = ?',
+        whereArgs: [musteriAdSoyad],
+      );
+    });
+  }
+  Future<List<Map<String, dynamic>>> getOdemeByKaynakId(String kaynakId) async {
+    final db = await database;
+    return await db.query(
+      'para9',
+      where: 'kaynakId = ?',
+      whereArgs: [kaynakId],
     );
   }
 }

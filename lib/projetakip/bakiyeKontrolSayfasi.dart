@@ -48,6 +48,7 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
         }
 
         var payments = snapshot.data ?? [];
+        print ("$payments");
         payments.removeWhere((payment) => payment['isSilinmis'] == 1);
         Map<String, Map<String, List<Map<String, dynamic>>>> groupedPayments = {};
 
@@ -179,23 +180,43 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
 
 
 // Tek bir ödemeyi TRY'ye çevirme
-  Future<double> _convertPaymentToTRY(Map<String, dynamic> payment) async {
-    try {
-      double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
-      String currency = payment['birim'] ?? 'TRY';
-      return await CurrencyConverter.convertToTRY(amount, currency);
-    } catch (e) {
-      return 0.0;
+
+  Future<bool> getFormStatus(String kaynakId) async {
+    final db = await _dbHelper.database;
+
+    // 'forms_2' tablosunda kaynakId'ye göre sorgu
+    List<Map<String, dynamic>> results = await db.query(
+      'forms_2',
+      where: 'num = ?',
+      whereArgs: [kaynakId], // Kaynak ID'yi sorguya dahil et
+    );
+
+    if (results.isEmpty) {
+      return true;
+    } else {
+      return false;
     }
   }
 
 
-
-  // Ödemeleri veritabanından çekme
   Future<List<Map<String, dynamic>>> _fetchOdemeler() async {
     final db = await _dbHelper.database;
-    return await db.query('para9', where: 'isSilinmis = ?', whereArgs: [0]);
+    final odemeler = await db.query('para9', where: 'isForm = ?', whereArgs: [1]);
+    for (var odeme in odemeler) {
+      // 'kaynakId' değerini doğru türde almak için 'toString()' kullanıyoruz
+      String kaynakId = odeme['kaynakId'].toString();
+
+      // getFormStatus fonksiyonunu çağırırken doğru türü sağlıyoruz
+      bool odemeId = await getFormStatus(kaynakId);
+
+      if (odemeId == true) {
+        await _dbHelper.silOdeme2(kaynakId);
+      }
+    }
+    final payments = await db.query('para9');
+    return payments;
   }
+
 
   // Tarih formatını Türkçe yapmak için
   String _formatDate(String yearMonth) {
@@ -211,7 +232,7 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
       child: ListView(
         children: [
           ListTile(
-            title: Text('Bakiye Kontrol'),
+            title: Text('Proje Ödemeleri'),
             onTap: () {
               setState(() {
                 _selectedIndex = 0;

@@ -22,6 +22,8 @@ class PhotosPage extends StatefulWidget {
 
 class _PhotosPageState extends State<PhotosPage> {
   Map<String, List<String>> imagePaths = {};
+  Set<String> selectedPhotos = {};
+  bool _isSelecting = false;
 
   @override
   void initState() {
@@ -91,8 +93,8 @@ class _PhotosPageState extends State<PhotosPage> {
 
       // Ekleme tarihini formatla
       final eklemeTarihiRaw = result.first['eklemeTarihi'] as String;
-      final eklemeTarihi = DateFormat('yyyyMMdd_HHmmss')
-          .format(DateTime.parse(eklemeTarihiRaw));
+      final eklemeTarihi =
+      DateFormat('yyyyMMdd_HHmmss').format(DateTime.parse(eklemeTarihiRaw));
 
       // Ana klasör
       final directoryPath = '/storage/emulated/0/SYD MEKATRONİK';
@@ -100,7 +102,8 @@ class _PhotosPageState extends State<PhotosPage> {
 
       // Görev klasörü oluşturma
       final gorevFolderPath =
-          '${sydFolder.path}/${widget.proje.musteriIsmi}/${widget.proje.projeIsmi}/${widget.gorev.gorevAdi}/Fotoğraflar';
+          '${sydFolder.path}/${widget.proje.musteriIsmi}/${widget.proje
+          .projeIsmi}/${widget.gorev.gorevAdi}/Fotoğraflar';
       final gorevFolder = Directory(gorevFolderPath);
 
       if (!await gorevFolder.exists()) {
@@ -122,8 +125,6 @@ class _PhotosPageState extends State<PhotosPage> {
     }
   }
 
-
-
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -137,8 +138,10 @@ class _PhotosPageState extends State<PhotosPage> {
 
       if (pickedFile != null) {
         final appDir = await getApplicationDocumentsDirectory();
-        final fileName = 'asama_${widget.asamaId}_${DateTime.now().toIso8601String()}.jpg';
-        final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+        final fileName =
+            'asama_${widget.asamaId}_${DateTime.now().toIso8601String()}.jpg';
+        final savedImage =
+        await File(pickedFile.path).copy('${appDir.path}/$fileName');
 
         final db = await DatabaseHelper().database;
         final eklemeTarihi = DateTime.now().toIso8601String();
@@ -158,37 +161,45 @@ class _PhotosPageState extends State<PhotosPage> {
     }
   }
 
-  Future<void> _deletePhoto(String path) async {
+  Future<void> _addPhotos() async {
     try {
-      final db = await DatabaseHelper().database;
+      final picker = ImagePicker();
+      final pickedFiles = await picker.pickMultiImage();
 
-      await db.delete(
-        'gorsel',
-        where: 'gorsel = ?',
-        whereArgs: [path],
-      );
+      if (pickedFiles.isNotEmpty) {
+        final appDir = await getApplicationDocumentsDirectory();
 
-      final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
+        for (var pickedFile in pickedFiles) {
+          final fileName =
+              'asama_${widget.asamaId}_${DateTime.now().toIso8601String()}.jpg';
+          final savedImage =
+          await File(pickedFile.path).copy('${appDir.path}/$fileName');
+
+          final db = await DatabaseHelper().database;
+          final eklemeTarihi = DateTime.now().toIso8601String();
+
+          await db.insert('gorsel', {
+            'asamaId': widget.asamaId,
+            'gorsel': savedImage.path,
+            'eklemeTarihi': eklemeTarihi,
+          });
+        }
+        _loadPhotos();
       }
-
-      setState(() {
-        imagePaths = {};
-      });
-      _loadPhotos();
     } catch (e) {
       print("Hata oluştu: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Fotoğraf silinirken bir hata oluştu: $e")),
+        SnackBar(content: Text("Fotoğraflar eklerken bir hata oluştu: $e")),
       );
     }
   }
 
+
   Future<void> _loadPhotos() async {
     try {
       final db = await DatabaseHelper().database;
-      final result = await db.query('gorsel', where: 'asamaId = ?', whereArgs: [widget.asamaId]);
+      final result = await db
+          .query('gorsel', where: 'asamaId = ?', whereArgs: [widget.asamaId]);
 
       Map<String, List<String>> groupedPhotos = {};
       for (var photo in result) {
@@ -237,7 +248,7 @@ class _PhotosPageState extends State<PhotosPage> {
               title: Text("Galeri"),
               onTap: () {
                 Navigator.pop(context);
-                _addPhoto(ImageSource.gallery);
+                _addPhotos();
               },
             ),
           ],
@@ -246,42 +257,44 @@ class _PhotosPageState extends State<PhotosPage> {
     );
   }
 
-  Future<void> _showDeleteConfirmationDialog(String path) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Fotoğrafı Sil"),
-          content: Text("Bu fotoğrafı silmek istiyor musunuz?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("İptal"),
-            ),
-            TextButton(
-              onPressed: () {
-                _deletePhoto(path);
-                Navigator.pop(context);
-              },
-              child: Text("Sil"),
-            ),
-          ],
+  Future<void> _deleteSelectedPhotos() async {
+    try {
+      final db = await DatabaseHelper().database;
+      for (String path in selectedPhotos) {
+        await db.delete(
+          'gorsel',
+          where: 'gorsel = ?',
+          whereArgs: [path],
         );
-      },
-    );
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+
+      setState(() {
+        selectedPhotos.clear(); // Seçilen fotoğrafları temizle
+      });
+      _loadPhotos(); // Fotoğrafları yenile
+
+    } catch (e) {
+      print("Hata oluştu: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fotoğraflar silinirken bir hata oluştu: $e")),
+      );
+    }
   }
 
   // Paylaşma işlemi
-  Future<void> _sharePhoto(String path) async {
+  Future<void> _shareSelectedPhotos() async {
     try {
-      final xFile = XFile(path);
-      await Share.shareXFiles([xFile]);
+      final xFiles = selectedPhotos.map((path) => XFile(path)).toList();
+      await Share.shareXFiles(xFiles);
     } catch (e) {
       print("Paylaşırken hata oluştu: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Fotoğraf paylaşılırken bir hata oluştu: $e")),
+        SnackBar(
+            content: Text("Fotoğraflar paylaşılırken bir hata oluştu: $e")),
       );
     }
   }
@@ -290,120 +303,172 @@ class _PhotosPageState extends State<PhotosPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text("Önizleme")),
-          body: Center(
-            child: Image.file(File(path)),
-          ),
-        ),
+        builder: (context) =>
+            Scaffold(
+              appBar: AppBar(title: Text("Önizleme")),
+              body: Center(
+                child: Image.file(File(path)),
+              ),
+            ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
 
     return Scaffold(
       appBar: AppBar(title: Text("Fotoğraflar")),
-      body: Column(
-        children: [
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 1,
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-              ),
-              itemCount: imagePaths.length,
-              itemBuilder: (context, index) {
-                final group = imagePaths.keys.toList()[index];
-                final photos = imagePaths[group]!;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey[50],
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            offset: Offset(2, 2),
-                            blurRadius: 6,
+      body: GestureDetector(
+        onTap: () {
+          // Boş bir alana tıklandığında seçim modunu kapat
+          if (_isSelecting) {
+            setState(() {
+              _isSelecting = false;
+            });
+          }
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(8.0),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 1,
+                  crossAxisSpacing: 8.0,
+                  mainAxisSpacing: 8.0,
+                ),
+                itemCount: imagePaths.length,
+                itemBuilder: (context, index) {
+                  final group = imagePaths.keys.toList()[index];
+                  final photos = imagePaths[group]!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.blueGrey[50],
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              offset: Offset(2, 2),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          group,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey[800],
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        group,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blueGrey[800],
                         ),
                       ),
-                    ),
-                    SizedBox(height: 10),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8.0,
-                        mainAxisSpacing: 8.0,
-                      ),
-                      itemCount: photos.length,
-                      itemBuilder: (context, idx) {
-                        return GestureDetector(
-                          onTap: () => _showPreview(photos[idx]),
-                          onLongPress: () {
-                            // Long press'te paylaşma ve silme seçeneklerini göster
-                            showModalBottomSheet(
-                              context: context,
-                              builder: (context) {
-                                return Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: Icon(Icons.share),
-                                      title: Text("Paylaş"),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _sharePhoto(photos[idx]);
+                      SizedBox(height: 10),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8.0,
+                          mainAxisSpacing: 8.0,
+                        ),
+                        itemCount: photos.length,
+                        itemBuilder: (context, idx) {
+                          return GestureDetector(
+                            onTap: () {
+                              if (_isSelecting) {
+                                setState(() {
+                                  if (selectedPhotos.contains(photos[idx])) {
+                                    selectedPhotos.remove(photos[idx]);
+                                  } else {
+                                    selectedPhotos.add(photos[idx]);
+                                  }
+                                });
+                              } else {
+                                _showPreview(photos[idx]);
+                              }
+                            },
+                            onLongPress: () {
+                              setState(() {
+                                _isSelecting = true;
+                              });
+                            },
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  child: Image.file(
+                                    File(photos[idx]),
+                                    fit: BoxFit.cover,
+                                    width: screenWidth / 3 - 16,
+                                    height: screenWidth / 3 - 16,
+                                  ),
+                                ),
+                                if (_isSelecting)
+                                  Positioned(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    child: Checkbox(
+                                      value: selectedPhotos.contains(
+                                          photos[idx]),
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          if (value == true) {
+                                            selectedPhotos.add(photos[idx]);
+                                          } else {
+                                            selectedPhotos.remove(photos[idx]);
+                                          }
+                                        });
                                       },
                                     ),
-                                    ListTile(
-                                      leading: Icon(Icons.delete),
-                                      title: Text("Sil"),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _showDeleteConfirmationDialog(photos[idx]);
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: Image.file(
-                              File(photos[idx]),
-                              fit: BoxFit.cover,
-                              width: screenWidth / 3 - 16,
-                              height: screenWidth / 3 - 16,
+                                  ),
+                              ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+            // Seçim modunda olan butonlar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: selectedPhotos.isEmpty
+                      ? null
+                      : () {
+                    _deleteSelectedPhotos();
+                    setState(() {
+                      _isSelecting = false;
+                    });
+                  },
+                  child: Text("Seçilenleri Sil"),
+                ),
+                ElevatedButton(
+                  onPressed: selectedPhotos.isEmpty
+                      ? null
+                      : () {
+                    _shareSelectedPhotos();
+                    setState(() {
+                      _isSelecting = false;
+                    });
+                  },
+                  child: Text("Seçilenleri Paylaş"),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddPhotoDialog,

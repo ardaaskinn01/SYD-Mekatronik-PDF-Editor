@@ -938,6 +938,15 @@ class _FormOlusturState extends State<FormOlustur> {
     await dbHelper.insertForm(form);
     await dbHelper.insertForm3(form3);
     if (!projeSureciChecked) {
+      // Ödeme kaydını güncellemek için numara ile ödeme sorgulaması yapıyoruz
+      var existingPayment = await dbHelper.getOdemeByKaynakId(num);
+
+      if (existingPayment.isNotEmpty) {
+        // Eski ödemeyi sil
+        await dbHelper.silOdeme2(num);
+      }
+
+      // Yeni ödeme kaydını oluştur
       final yeniOdeme = {
         'id': DateTime.now().toIso8601String(),
         'kaynakId': num,
@@ -947,6 +956,8 @@ class _FormOlusturState extends State<FormOlustur> {
         'isForm': 1,
         'isSilinmis': 0,
       };
+
+      // Yeni ödeme kaydını ekle
       await dbHelper.insertOdeme(yeniOdeme);
     }
 

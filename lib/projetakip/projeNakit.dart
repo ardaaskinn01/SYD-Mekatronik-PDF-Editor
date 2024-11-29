@@ -110,12 +110,17 @@ class _ProjeNakitState extends State<ProjeNakit> {
                       DateTime.now().toIso8601String(),
                   'isForm': 0,
                 };
-
-                if (odeme == null) {
-                  await _dbHelper.insertOdeme(yeniOdeme);
-                } else {
-                  await _dbHelper.updateOdeme(yeniOdeme);
+                try {
+                  if (odeme == null) {
+                    await _dbHelper.insertOdeme(yeniOdeme);
+                  } else {
+                    await _dbHelper.updateOdeme(yeniOdeme);
+                  }
                 }
+                catch (e){
+                  print('ödeme eklenemedi: $e');
+                }
+
                 await _fetchOdemeler();
                 Navigator.pop(context, 'updated'); // Geri dönüş sonucu
               },

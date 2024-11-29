@@ -144,7 +144,8 @@ class _MusteriFormlariScreenState extends State<MusteriFormlariScreen> {
 
     if (confirm == true) {
       try {
-        await DatabaseHelper().deleteForm(form);
+        // Veritabanında formu silinmiş olarak işaretleme
+        await DatabaseHelper().silOdeme2(form.num);
 
         setState(() {
           forms.remove(form); // Listedeki formu sil
@@ -161,7 +162,6 @@ class _MusteriFormlariScreenState extends State<MusteriFormlariScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
