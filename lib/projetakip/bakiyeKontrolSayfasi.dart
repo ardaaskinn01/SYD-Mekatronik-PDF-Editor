@@ -48,8 +48,6 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
         }
 
         var payments = snapshot.data ?? [];
-        print ("$payments");
-        payments.removeWhere((payment) => payment['isSilinmis'] == 1);
         Map<String, Map<String, List<Map<String, dynamic>>>> groupedPayments = {};
 
         // Yıl-Ay bazında ve isForm durumuna göre gruplama
@@ -198,9 +196,27 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
     }
   }
 
+  Future<bool> getFormStatus2(String kaynakId) async {
+    final db = await _dbHelper.database;
+
+    // 'forms_2' tablosunda kaynakId'ye göre sorgu
+    List<Map<String, dynamic>> results = await db.query(
+      'projeler4',
+      where: 'id = ?',
+      whereArgs: [kaynakId], // Kaynak ID'yi sorguya dahil et
+    );
+
+    if (results.isEmpty) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
 
   Future<List<Map<String, dynamic>>> _fetchOdemeler() async {
     final db = await _dbHelper.database;
+    final odemeler2 = await db.query('para9', where: 'isForm = ?', whereArgs: [0]);
     final odemeler = await db.query('para9', where: 'isForm = ?', whereArgs: [1]);
     for (var odeme in odemeler) {
       // 'kaynakId' değerini doğru türde almak için 'toString()' kullanıyoruz
@@ -208,6 +224,17 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
 
       // getFormStatus fonksiyonunu çağırırken doğru türü sağlıyoruz
       bool odemeId = await getFormStatus(kaynakId);
+
+      if (odemeId == true) {
+        await _dbHelper.silOdeme2(kaynakId);
+      }
+    }
+    for (var odeme in odemeler2) {
+      // 'kaynakId' değerini doğru türde almak için 'toString()' kullanıyoruz
+      String kaynakId = odeme['kaynakId'].toString();
+
+      // getFormStatus fonksiyonunu çağırırken doğru türü sağlıyoruz
+      bool odemeId = await getFormStatus2(kaynakId);
 
       if (odemeId == true) {
         await _dbHelper.silOdeme2(kaynakId);

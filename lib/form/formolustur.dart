@@ -954,7 +954,6 @@ class _FormOlusturState extends State<FormOlustur> {
         'birim': 'TRY',
         'eklemeTarihi': DateTime.now().toIso8601String(),
         'isForm': 1,
-        'isSilinmis': 0,
       };
 
       // Yeni ödeme kaydını ekle

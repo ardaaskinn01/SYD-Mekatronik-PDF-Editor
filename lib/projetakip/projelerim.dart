@@ -444,6 +444,7 @@ class _ProjelerimState extends State<Projelerim>
   }
 
   Future<void> _silProje(String projeId) async {
+
     await _dbHelper.deleteProje(projeId);
     _fetchProjeler();
   }

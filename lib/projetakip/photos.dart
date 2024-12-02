@@ -354,27 +354,61 @@ class _PhotosPageState extends State<PhotosPage> {
                           ),
                         ),
                       ),
-                      // GridView.builder ile fotoğrafları 3lü grid şeklinde göstermek
+                      // Fotoğrafları 3lü grid şeklinde göstermek
                       GridView.builder(
                         shrinkWrap: true,
-                        // Listeyi yatay kaydırılabilir yapar
                         physics: NeverScrollableScrollPhysics(),
-                        // Scroll yapılmasını engeller
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, // Her satırda 3 fotoğraf
-                          crossAxisSpacing: 8, // Aradaki yatay boşluk
-                          mainAxisSpacing: 8, // Aradaki dikey boşluk
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 1,
+                          mainAxisSpacing: 2,
                         ),
                         itemCount: photos.length,
                         itemBuilder: (context, photoIndex) {
                           String photoPath = photos[photoIndex];
+
                           return GestureDetector(
                             onTap: () {
-                              _showPreview(photoPath);
+                              // Eğer seçim modundaysak, fotoğrafı seçme veya seçimi kaldırma
+                              if (_isSelecting) {
+                                setState(() {
+                                  if (selectedPhotos.contains(photoPath)) {
+                                    selectedPhotos.remove(photoPath);
+                                  } else {
+                                    selectedPhotos.add(photoPath);
+                                  }
+                                });
+                              } else {
+                                _showPreview(photoPath);
+                              }
                             },
-                            child: Image.file(
-                              File(photoPath),
-                              fit: BoxFit.cover,
+                            onLongPress: () {
+                              // Uzun basarak seçim moduna geçiş
+                              setState(() {
+                                _isSelecting = true;
+                                if (!selectedPhotos.contains(photoPath)) {
+                                  selectedPhotos.add(photoPath);
+                                }
+                              });
+                            },
+                            child: Stack(
+                              children: [
+                                Image.file(
+                                  File(photoPath),
+                                  fit: BoxFit.contain,
+                                ),
+                                if (_isSelecting)
+                                  Positioned(
+                                    top: 1,
+                                    right: 1,
+                                    child: Icon(
+                                      selectedPhotos.contains(photoPath)
+                                          ? Icons.check_circle
+                                          : Icons.circle,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                              ],
                             ),
                           );
                         },
