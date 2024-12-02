@@ -378,6 +378,17 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> updateProje2(ProjeModel proje) async {
+    final db = await database;
+
+    await db.update(
+      'projeler4', // Tablo adı
+      proje.toMap(),
+      where: 'id = ?',
+      whereArgs: [proje.id],
+    );
+  }
+
   Future<int> deleteProje(String projeId) async {
     final db = await database;
 

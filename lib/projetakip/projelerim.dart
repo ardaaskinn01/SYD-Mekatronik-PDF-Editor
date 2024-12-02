@@ -320,6 +320,15 @@ class _ProjelerimState extends State<Projelerim>
                 ),
                 const Divider(),
                 ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.blue, size: 32),
+                  title: const Text('Bilgileri Düzenle'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showEditDialog(proje);  // Bilgileri düzenleme ekranını açıyoruz
+                  },
+                ),
+                const Divider(),
+                ListTile(
                   leading: const Icon(Icons.cancel, color: Colors.grey, size: 32),
                   title: const Text('İptal'),
                   onTap: () {
@@ -329,6 +338,76 @@ class _ProjelerimState extends State<Projelerim>
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(ProjeModel proje) {
+    final TextEditingController projeIsmiController = TextEditingController(text: proje.projeIsmi);
+    final TextEditingController musteriIsmiController = TextEditingController(text: proje.musteriIsmi);
+    final TextEditingController aciklamaController = TextEditingController(text: proje.projeAciklama);
+    final TextEditingController baslangicTarihiController = TextEditingController(
+      text: DateFormat('dd.MM.yyyy').format(proje.baslangicTarihi!),
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Proje Bilgilerini Düzenle"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: projeIsmiController,
+                  decoration: const InputDecoration(labelText: 'Proje Adı'),
+                ),
+                TextField(
+                  controller: musteriIsmiController,
+                  decoration: const InputDecoration(labelText: 'Müşteri Adı'),
+                ),
+                TextField(
+                  controller: aciklamaController,
+                  decoration: const InputDecoration(labelText: 'Açıklama'),
+                ),
+                TextField(
+                  controller: baslangicTarihiController,
+                  decoration: const InputDecoration(labelText: 'Başlangıç Tarihi'),
+                  keyboardType: TextInputType.datetime,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("İptal"),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Güncellenen değerlerle proje bilgilerini veritabanında güncelle
+                ProjeModel updatedProje = ProjeModel(
+                  id: proje.id,
+                  projeIsmi: projeIsmiController.text,
+                  musteriIsmi: musteriIsmiController.text,
+                  projeAciklama: aciklamaController.text,
+                  baslangicTarihi: DateFormat('dd.MM.yyyy').parse(baslangicTarihiController.text),
+                  isFinish: proje.isFinish,
+                );
+
+                await _dbHelper.updateProje2(updatedProje);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Proje bilgileri güncellendi.')),
+                );
+                Navigator.of(context).pop();
+                _fetchProjeler();  // Veritabanını güncelledikten sonra projeleri tekrar yükle
+              },
+              child: const Text("Güncelle"),
+            ),
+          ],
         );
       },
     );

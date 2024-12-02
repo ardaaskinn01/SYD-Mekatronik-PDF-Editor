@@ -194,7 +194,6 @@ class _PhotosPageState extends State<PhotosPage> {
     }
   }
 
-
   Future<void> _loadPhotos() async {
     try {
       final db = await DatabaseHelper().database;
@@ -276,7 +275,6 @@ class _PhotosPageState extends State<PhotosPage> {
         selectedPhotos.clear(); // Seçilen fotoğrafları temizle
       });
       _loadPhotos(); // Fotoğrafları yenile
-
     } catch (e) {
       print("Hata oluştu: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -334,102 +332,49 @@ class _PhotosPageState extends State<PhotosPage> {
         },
         child: Column(
           children: [
+            // Fotoğrafları ve tarih başlıklarını listeleyen GridView
             Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(8.0),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 1,
-                  crossAxisSpacing: 8.0,
-                  mainAxisSpacing: 8.0,
-                ),
-                itemCount: imagePaths.length,
+              child: ListView.builder(
+                itemCount: imagePaths.keys.length,
                 itemBuilder: (context, index) {
-                  final group = imagePaths.keys.toList()[index];
-                  final photos = imagePaths[group]!;
+                  String weekOfYear = imagePaths.keys.elementAt(index);
+                  List<String> photos = imagePaths[weekOfYear]!;
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.blueGrey[50],
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              offset: Offset(2, 2),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
+                      // Tarih Başlığı
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          group,
+                          weekOfYear,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey[800],
                           ),
                         ),
                       ),
-                      SizedBox(height: 10),
+                      // GridView.builder ile fotoğrafları 3lü grid şeklinde göstermek
                       GridView.builder(
                         shrinkWrap: true,
+                        // Listeyi yatay kaydırılabilir yapar
+                        physics: NeverScrollableScrollPhysics(),
+                        // Scroll yapılmasını engeller
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 8.0,
-                          mainAxisSpacing: 8.0,
+                          crossAxisCount: 3, // Her satırda 3 fotoğraf
+                          crossAxisSpacing: 8, // Aradaki yatay boşluk
+                          mainAxisSpacing: 8, // Aradaki dikey boşluk
                         ),
                         itemCount: photos.length,
-                        itemBuilder: (context, idx) {
+                        itemBuilder: (context, photoIndex) {
+                          String photoPath = photos[photoIndex];
                           return GestureDetector(
                             onTap: () {
-                              if (_isSelecting) {
-                                setState(() {
-                                  if (selectedPhotos.contains(photos[idx])) {
-                                    selectedPhotos.remove(photos[idx]);
-                                  } else {
-                                    selectedPhotos.add(photos[idx]);
-                                  }
-                                });
-                              } else {
-                                _showPreview(photos[idx]);
-                              }
+                              _showPreview(photoPath);
                             },
-                            onLongPress: () {
-                              setState(() {
-                                _isSelecting = true;
-                              });
-                            },
-                            child: Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  child: Image.file(
-                                    File(photos[idx]),
-                                    fit: BoxFit.cover,
-                                    width: screenWidth / 3 - 16,
-                                    height: screenWidth / 3 - 16,
-                                  ),
-                                ),
-                                if (_isSelecting)
-                                  Positioned(
-                                    top: 8.0,
-                                    right: 8.0,
-                                    child: Checkbox(
-                                      value: selectedPhotos.contains(
-                                          photos[idx]),
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          if (value == true) {
-                                            selectedPhotos.add(photos[idx]);
-                                          } else {
-                                            selectedPhotos.remove(photos[idx]);
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ),
-                              ],
+                            child: Image.file(
+                              File(photoPath),
+                              fit: BoxFit.cover,
                             ),
                           );
                         },
@@ -439,7 +384,7 @@ class _PhotosPageState extends State<PhotosPage> {
                 },
               ),
             ),
-            // Seçim modunda olan butonlar
+            // Seçilen fotoğraflarla yapılacak işlemler (Sil, Paylaş vb.)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
