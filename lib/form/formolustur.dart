@@ -209,7 +209,7 @@ class _FormOlusturState extends State<FormOlustur> {
     final yetkili =
         await _buildPdfPositionedText(0.293, 0.15, yetkiliController.text);
     final yetkili2 =
-        await _buildPdfPositionedText(0.797, 0.29, yetkiliController.text);
+        await _buildPdfPositionedText(0.797, 0.29, "Seydi Kulaç");
     final islemTanim = await _buildPdfPositionedText(
         0.343, 0.05, islemKisaTanimController.text);
     final islemDetay = await _buildPdfPositionedLongText(
@@ -950,7 +950,7 @@ class _FormOlusturState extends State<FormOlustur> {
       final yeniOdeme = {
         'id': DateTime.now().toIso8601String(),
         'kaynakId': num,
-        'miktar': toplamController.text,
+        'miktar': iscilikController.text,
         'birim': 'TRY',
         'eklemeTarihi': DateTime.now().toIso8601String(),
         'isForm': 1,
@@ -1116,7 +1116,7 @@ class _FormOlusturState extends State<FormOlustur> {
                     top: boxHeight * 0.766,
                     left: boxWidth * 0.31,
                     child: Text(
-                      yetkiliController.text,
+                      "Seydi Kulaç",
                       style: const TextStyle(
                         fontSize: 9.5,
                         fontFamily: 'Georgia',

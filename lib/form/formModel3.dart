@@ -9,6 +9,7 @@ class FormModel3 {
   String? mail;
   String? telefon;
   String? yetkili;
+  String? musteriYetkili;
   String? islemKisaTanim;
   String? islemDetay;
   String? malzeme;
@@ -33,6 +34,7 @@ class FormModel3 {
     this.adres = '',
     this.telefon = '',
     this.yetkili = '',
+    this.musteriYetkili = '',
     this.islemKisaTanim = '',
     this.mail = '',
     this.malzeme = '',
@@ -64,6 +66,7 @@ class FormModel3 {
       'mail': mail,
       'telefon': telefon,
       'yetkili': yetkili,
+      'musteriYetkili': musteriYetkili,
       'islemKisaTanim': islemKisaTanim,
       'islemDetay': islemDetay,
       'malzeme': malzeme,

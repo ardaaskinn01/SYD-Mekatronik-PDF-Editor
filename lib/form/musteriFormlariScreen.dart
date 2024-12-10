@@ -146,6 +146,7 @@ class _MusteriFormlariScreenState extends State<MusteriFormlariScreen> {
       try {
         // Veritabanında formu silinmiş olarak işaretleme
         await DatabaseHelper().silOdeme2(form.num);
+        await DatabaseHelper().deleteForm(form);
 
         setState(() {
           forms.remove(form); // Listedeki formu sil

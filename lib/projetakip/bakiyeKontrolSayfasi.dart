@@ -6,6 +6,38 @@ import 'projeNakit.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+class CurrencyConverter {
+  static Future<double> convertToTRY(double amount, String currency) async {
+    String apiKey = 'a03fbae025e061d1beda3e8d';
+    String url = 'https://v6.exchangerate-api.com/v6/$apiKey/latest/$currency';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (!data.containsKey('conversion_rates') || !data['conversion_rates'].containsKey('TRY')) {
+          throw Exception('Döviz kuru verisi eksik veya hatalı');
+        }
+        if (data.containsKey('conversion_rates') && data['conversion_rates'].containsKey('TRY')) {
+          double rate = (data['conversion_rates']['TRY'] as num).toDouble();
+          return amount * rate;
+        } else {
+          throw Exception('Döviz kuru verisi eksik veya hatalı');
+        }
+      } else {
+        throw Exception('Döviz kuru API isteği başarısız: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (navigatorKey.currentContext != null) {
+        ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+          SnackBar(content: Text('Döviz kuru API hatası: $e')),
+        );
+      }
+      throw Exception('API isteği hatası: $e');
+    }
+  }
+}
+
 class BakiyeKontrolSayfasi extends StatefulWidget {
   @override
   _BakiyeKontrolSayfasiState createState() => _BakiyeKontrolSayfasiState();
@@ -345,34 +377,4 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
   }
 }
 
-class CurrencyConverter {
-  static Future<double> convertToTRY(double amount, String currency) async {
-    String apiKey = 'a03fbae025e061d1beda3e8d';
-    String url = 'https://v6.exchangerate-api.com/v6/$apiKey/latest/$currency';
 
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
-        if (!data.containsKey('conversion_rates') || !data['conversion_rates'].containsKey('TRY')) {
-          throw Exception('Döviz kuru verisi eksik veya hatalı');
-        }
-        if (data.containsKey('conversion_rates') && data['conversion_rates'].containsKey('TRY')) {
-          double rate = (data['conversion_rates']['TRY'] as num).toDouble();
-          return amount * rate;
-        } else {
-          throw Exception('Döviz kuru verisi eksik veya hatalı');
-        }
-      } else {
-        throw Exception('Döviz kuru API isteği başarısız: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (navigatorKey.currentContext != null) {
-        ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-          SnackBar(content: Text('Döviz kuru API hatası: $e')),
-        );
-      }
-      throw Exception('API isteği hatası: $e');
-    }
-  }
-}

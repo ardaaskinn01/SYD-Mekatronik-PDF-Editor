@@ -18,8 +18,8 @@ class _AnasayfaState extends State<Anasayfa> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final buttonWidth = screenWidth * 0.8;
-    final buttonHeight = 60.0;
-    final buttonSpacing = 20.0;
+    final buttonHeight = screenWidth * 0.135;
+    final buttonSpacing = screenWidth * 0.04;
 
     return Scaffold(
       backgroundColor: Colors.white10.withOpacity(0.22),
@@ -27,7 +27,7 @@ class _AnasayfaState extends State<Anasayfa> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            SizedBox(height: 50), // Logonun üst boşluğu
+            SizedBox(height: screenWidth * 0.1), // Logonun üst boşluğu
             // Logo
             Container(
               width: double.infinity, // Yatayda tam genişlik
@@ -36,13 +36,13 @@ class _AnasayfaState extends State<Anasayfa> {
                 fit: BoxFit.cover, // Resmin genişliği düzgün şekilde kaplamasını sağlar
               ),
             ),
-            SizedBox(height: 70), // Logonun alt boşluğu
+           SizedBox(height: screenWidth * 0.12), // Logonun alt boşluğu
 // Logo ile butonlar arasındaki mesafe
 
             // Butonlar
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
                   buildButton(
                     label: "Teknik Servis Formu Oluştur",

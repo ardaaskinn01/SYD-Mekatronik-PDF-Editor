@@ -4,10 +4,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf_editor/projetakip/ProjeGoreviModel.dart';
 import 'package:pdf_editor/projetakip/projeModel.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:share_plus/share_plus.dart'; // SharePlus kütüphanesini ekleyin
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import '../databaseHelper.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
 class PhotosPage extends StatefulWidget {
   final String asamaId;
@@ -94,7 +96,7 @@ class _PhotosPageState extends State<PhotosPage> {
       // Ekleme tarihini formatla
       final eklemeTarihiRaw = result.first['eklemeTarihi'] as String;
       final eklemeTarihi =
-      DateFormat('yyyyMMdd_HHmmss').format(DateTime.parse(eklemeTarihiRaw));
+          DateFormat('yyyyMMdd_HHmmss').format(DateTime.parse(eklemeTarihiRaw));
 
       // Ana klasör
       final directoryPath = '/storage/emulated/0/SYD MEKATRONİK';
@@ -102,8 +104,7 @@ class _PhotosPageState extends State<PhotosPage> {
 
       // Görev klasörü oluşturma
       final gorevFolderPath =
-          '${sydFolder.path}/${widget.proje.musteriIsmi}/${widget.proje
-          .projeIsmi}/${widget.gorev.gorevAdi}/Fotoğraflar';
+          '${sydFolder.path}/${widget.proje.musteriIsmi}/${widget.proje.projeIsmi}/${widget.gorev.gorevAdi}/Fotoğraflar';
       final gorevFolder = Directory(gorevFolderPath);
 
       if (!await gorevFolder.exists()) {
@@ -141,7 +142,7 @@ class _PhotosPageState extends State<PhotosPage> {
         final fileName =
             'asama_${widget.asamaId}_${DateTime.now().toIso8601String()}.jpg';
         final savedImage =
-        await File(pickedFile.path).copy('${appDir.path}/$fileName');
+            await File(pickedFile.path).copy('${appDir.path}/$fileName');
 
         final db = await DatabaseHelper().database;
         final eklemeTarihi = DateTime.now().toIso8601String();
@@ -162,35 +163,36 @@ class _PhotosPageState extends State<PhotosPage> {
   }
 
   Future<void> _addPhotos() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFiles = await picker.pickMultiImage();
+    // İzin verildiyse fotoğraf seçici UI'sını başlat
+    final List<AssetEntity>? selectedAssets = await AssetPicker.pickAssets(
+      context,
+      pickerConfig: AssetPickerConfig(
+        maxAssets: 10, // Maksimum seçim yapılacak görsel sayısı
+        requestType: RequestType.image, // Yalnızca görseller
+      ),
+    );
 
-      if (pickedFiles.isNotEmpty) {
-        final appDir = await getApplicationDocumentsDirectory();
+    if (selectedAssets != null && selectedAssets.isNotEmpty) {
+      final appDir = await getApplicationDocumentsDirectory();
+      final db = await DatabaseHelper().database;
 
-        for (var pickedFile in pickedFiles) {
+      for (var asset in selectedAssets) {
+        final file = await asset.file;
+        if (file != null) {
           final fileName =
               'asama_${widget.asamaId}_${DateTime.now().toIso8601String()}.jpg';
-          final savedImage =
-          await File(pickedFile.path).copy('${appDir.path}/$fileName');
-
-          final db = await DatabaseHelper().database;
+          final savedImage = await file.copy('${appDir.path}/$fileName');
           final eklemeTarihi = DateTime.now().toIso8601String();
 
+          // Veritabanına kaydet
           await db.insert('gorsel', {
             'asamaId': widget.asamaId,
             'gorsel': savedImage.path,
             'eklemeTarihi': eklemeTarihi,
           });
         }
-        _loadPhotos();
       }
-    } catch (e) {
-      print("Hata oluştu: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Fotoğraflar eklerken bir hata oluştu: $e")),
-      );
+      _loadPhotos(); // Fotoğrafları tekrar yükle
     }
   }
 
@@ -301,23 +303,19 @@ class _PhotosPageState extends State<PhotosPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            Scaffold(
-              appBar: AppBar(title: Text("Önizleme")),
-              body: Center(
-                child: Image.file(File(path)),
-              ),
-            ),
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text("Önizleme")),
+          body: Center(
+            child: Image.file(File(path)),
+          ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(title: Text("Fotoğraflar")),
@@ -426,22 +424,22 @@ class _PhotosPageState extends State<PhotosPage> {
                   onPressed: selectedPhotos.isEmpty
                       ? null
                       : () {
-                    _deleteSelectedPhotos();
-                    setState(() {
-                      _isSelecting = false;
-                    });
-                  },
+                          _deleteSelectedPhotos();
+                          setState(() {
+                            _isSelecting = false;
+                          });
+                        },
                   child: Text("Seçilenleri Sil"),
                 ),
                 ElevatedButton(
                   onPressed: selectedPhotos.isEmpty
                       ? null
                       : () {
-                    _shareSelectedPhotos();
-                    setState(() {
-                      _isSelecting = false;
-                    });
-                  },
+                          _shareSelectedPhotos();
+                          setState(() {
+                            _isSelecting = false;
+                          });
+                        },
                   child: Text("Seçilenleri Paylaş"),
                 ),
               ],
