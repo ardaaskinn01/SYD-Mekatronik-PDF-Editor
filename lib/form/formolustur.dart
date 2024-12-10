@@ -956,8 +956,23 @@ class _FormOlusturState extends State<FormOlustur> {
         'isForm': 1,
       };
 
-      // Yeni ödeme kaydını ekle
-      await dbHelper.insertOdeme(yeniOdeme);
+      final yeniOdeme2 = {
+        'id': DateTime.now().toIso8601String(),
+        'kaynakId': num,
+        'miktar': malzemeController.text,
+        'birim': 'TRY',
+        'eklemeTarihi': DateTime.now().toIso8601String(),
+        'isForm': 2,
+      };
+
+      if (malzemeController.text.isNotEmpty) {
+        // Yeni ödeme kaydını ekle
+        await dbHelper.insertOdeme(yeniOdeme);
+        await dbHelper.insertOdeme(yeniOdeme2);
+      }
+      else {
+        await dbHelper.insertOdeme(yeniOdeme);
+      }
     }
 
     // SnackBar ile mesaj göster

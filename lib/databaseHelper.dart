@@ -521,4 +521,20 @@ class DatabaseHelper {
       whereArgs: [kaynakId],
     );
   }
+
+  Future<double?> getToplamHarcama(String projeId) async {
+    final db = await database;
+    final result = await db.query(
+      'para9',
+      where: 'kaynakId = ? AND isForm = 2',
+      whereArgs: [projeId],
+      orderBy: 'eklemeTarihi DESC',
+      limit: 1, // Son kaydı al
+    );
+
+    if (result.isNotEmpty) {
+      return double.tryParse(result.first['miktar'].toString());
+    }
+    return null; // Eğer veri yoksa null döndür
+  }
 }

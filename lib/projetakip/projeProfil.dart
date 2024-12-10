@@ -20,12 +20,21 @@ class ProjeProfil extends StatefulWidget {
 class _ProjeProfilState extends State<ProjeProfil> {
   late ProjeModel proje;
   List<ProjeGoreviModel> projeGorevleri = [];
+  double totalHarcama = 0;
 
   @override
   void initState() {
     super.initState();
     proje = widget.proje;
     _loadProjeGorevleri();
+    _loadTotalHarcama();
+  }
+
+  void _loadTotalHarcama() async {
+    final harcama = await DatabaseHelper().getToplamHarcama(proje.id!); // Harcamayı veritabanından çek
+    setState(() {
+      totalHarcama = harcama ?? 0.0; // Eğer veri yoksa 0.0 olarak ayarla
+    });
   }
 
   Future<bool> requestPermissions() async {
@@ -160,6 +169,9 @@ class _ProjeProfilState extends State<ProjeProfil> {
               backgroundColor: Colors.green.shade50,
             ),
             SizedBox(height: 16),
+            _buildSectionTitle("Harcamalar"),
+            _buildHarcamaSection(),
+            SizedBox(height: 16),
             _buildSectionTitle("Aşamalar"),
             _buildTaskList(),
             if (!proje.isFinish) // Butonu gizlemek için kontrol
@@ -287,6 +299,92 @@ class _ProjeProfilState extends State<ProjeProfil> {
     }
   }
 
+  void _showHarcamaDialog({required bool isAdding}) {
+    final TextEditingController miktarController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(isAdding ? "Harcama Ekle" : "Harcama Çıkar"),
+          content: TextField(
+            controller: miktarController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(hintText: "Miktar giriniz"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("İptal"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                double miktar = double.tryParse(miktarController.text) ?? 0.0;
+
+                if (!isAdding) {
+                  miktar = -miktar;
+                }
+
+                setState(() {
+                  totalHarcama += miktar;
+                });
+
+                await DatabaseHelper().silOdeme2(proje.id!); // Önceki harcamayı sil
+                final yeniOdeme2 = {
+                  'id': DateTime.now().toIso8601String(),
+                  'kaynakId': proje.id,
+                  'miktar': totalHarcama,
+                  'birim': 'TRY',
+                  'eklemeTarihi': proje.baslangicTarihi,
+                  'isForm': 2,
+                };
+                await DatabaseHelper().insertOdeme(yeniOdeme2); // Yeni harcamayı ekle
+
+                _loadTotalHarcama();
+                Navigator.pop(context); // Dialogu kapat
+              },
+              child: Text("Kaydet"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  Widget _buildHarcamaSection() {
+    return Card(
+      elevation: 5,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Toplam Harcama: $totalHarcama TRY",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _showHarcamaDialog(isAdding: true),
+                  icon: Icon(Icons.add, color: Colors.green),
+                  label: Text("Ekle", style: TextStyle(color: Colors.black)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showHarcamaDialog(isAdding: false),
+                  icon: Icon(Icons.remove, color: Colors.red),
+                  label: Text("Çıkar", style: TextStyle(color: Colors.black)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildTaskList() {
     return FutureBuilder<List<ProjeGoreviModel>>(

@@ -88,11 +88,14 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
           int isForm = payment['isForm'] ?? 0;
 
           if (!groupedPayments.containsKey(yearMonth)) {
-            groupedPayments[yearMonth] = {'form': [], 'proje': []};
+            groupedPayments[yearMonth] = {'form': [], 'form2': [], 'proje': []};
           }
 
           if (isForm == 1) {
             groupedPayments[yearMonth]!['form']!.add(payment);
+          }
+          else if (isForm == 2) {
+            groupedPayments[yearMonth]!['form2']!.add(payment);
           } else {
             groupedPayments[yearMonth]!['proje']!.add(payment);
           }
@@ -148,6 +151,8 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
                         Text("Proje Ücretleri (EUR): ${amounts['proje']!['EUR']?.toStringAsFixed(2)} EUR"),
                         Text("Proje Ücretleri (TRY): ${amounts['proje']!['TRY']?.toStringAsFixed(2)} ₺"),
                         SizedBox(height: 8),
+                        Text("Proje Malzeme Ücretleri (TRY): ${amounts['form2']!['TRY']?.toStringAsFixed(2)} ₺"),
+                        SizedBox(height: 8),
                         Divider(thickness: 1),
                         FutureBuilder<double>(
                           future: _calculateTotalInTRY(amounts),
@@ -178,11 +183,18 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
       Map<String, List<Map<String, dynamic>>> groupedPayments) async {
     Map<String, double> formAmounts = {'USD': 0.0, 'EUR': 0.0, 'TRY': 0.0};
     Map<String, double> projeAmounts = {'USD': 0.0, 'EUR': 0.0, 'TRY': 0.0};
+    Map<String, double> form2Amounts = {'USD': 0.0, 'EUR': 0.0, 'TRY': 0.0};
 
     for (var payment in groupedPayments['form']!) {
       double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
       String currency = payment['birim'] ?? 'TRY';
       formAmounts[currency] = (formAmounts[currency] ?? 0) + amount;
+    }
+
+    for (var payment in groupedPayments['form2']!) {
+      double amount = double.tryParse(payment['miktar'] ?? '') ?? 0.0;
+      String currency = payment['birim'] ?? 'TRY';
+      form2Amounts[currency] = (form2Amounts[currency] ?? 0) + amount;
     }
 
     for (var payment in groupedPayments['proje']!) {
@@ -191,7 +203,7 @@ class _BakiyeKontrolSayfasiState extends State<BakiyeKontrolSayfasi> {
       projeAmounts[currency] = (projeAmounts[currency] ?? 0) + amount;
     }
 
-    return {'form': formAmounts, 'proje': projeAmounts};
+    return {'form': formAmounts, "form2": form2Amounts, 'proje': projeAmounts};
   }
 
 // Detaylı verileri toplam TRY'ye çevirme
